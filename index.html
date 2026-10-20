@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Forja de Almas</title>
+
+<!-- ===== PWA / iOS ===== -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Forja de Almas">
+<meta name="application-name" content="Forja de Almas">
+<meta name="theme-color" content="#0b0a0f">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" id="appleIcon" href="">
+<link rel="manifest" id="manifestLink" href="">
+
+<!-- ===== Fuentes ===== -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- ===== Tailwind ===== -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        noche: '#0b0a0f', abismo: '#14121b', velo: '#1d1a26',
+        oro: '#d4af6a', oroclaro: '#f1d9a2', sangre: '#7a1f2b', bruma: '#a8a1b8'
+      },
+      fontFamily: {
+        cinzel: ['Cinzel', 'serif'],
+        cormorant: ['"Cormorant Garamond"', 'serif'],
+        inter: ['Inter', 'system-ui', 'sans-serif']
+      }
+    }
+  }
+}
+</script>
+
+<style>
+  :root { --oro:#d4af6a; }
+  html, body {
+    background:#0b0a0f; color:#e9e4f0;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    overscroll-behavior-y: none;
+  }
+  body {
+    min-height: 100dvh;
+    font-family: Inter, system-ui, sans-serif;
+    background:
+      radial-gradient(ellipse at 50% -10%, rgba(122,31,43,.35), transparent 55%),
+      radial-gradient(ellipse at 100% 100%, rgba(212,175,106,.10), transparent 50%),
+      #0b0a0f;
+    background-attachment: fixed;
+  }
+  button { touch-action: manipulation; -webkit-user-select:none; user-select:none; }
+  input, textarea { font-size:16px !important; } /* evita el zoom automático de iOS */
+  .safe-top { padding-top: max(env(safe-area-inset-top), 16px); }
+  .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom), 16px); }
+
+  .marco {
+    position: relative;
+    border: 1px solid rgba(212,175,106,.45);
+    background: linear-gradient(180deg, rgba(29,26,38,.92), rgba(20,18,27,.95));
+    box-shadow: 0 0 0 1px rgba(0,0,0,.6), inset 0 0 30px rgba(212,175,106,.05), 0 10px 40px rgba(0,0,0,.5);
+  }
+  .marco::before, .marco::after {
+    content:''; position:absolute; width:14px; height:14px;
+    border-color: var(--oro); border-style: solid; pointer-events:none;
+  }
+  .marco::before { top:-1px; left:-1px; border-width:2px 0 0 2px; }
+  .marco::after { bottom:-1px; right:-1px; border-width:0 2px 2px 0; }
+
+  .titulo-oro {
+    background: linear-gradient(180deg, #f6e3b4 0%, #d4af6a 50%, #9c7a3c 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .divisor { height:1px; background: linear-gradient(90deg, transparent, rgba(212,175,106,.7), transparent); }
+  .opcion { transition: transform .12s ease, border-color .2s, background .2s; }
+  .opcion:active { transform: scale(.97); }
+  .opcion.sel { border-color:#f1d9a2; background: linear-gradient(180deg, rgba(122,31,43,.5), rgba(29,26,38,.95)); }
+  .opcion.off { opacity:.35; }
+
+  .campo {
+    width:100%; background: rgba(11,10,15,.7); border:1px solid rgba(212,175,106,.4);
+    border-radius: 14px; padding: 14px 16px; color:#f3eee8; outline:none;
+    font-family: 'Cormorant Garamond', serif;
+  }
+  .campo:focus { border-color:#f1d9a2; box-shadow: 0 0 0 3px rgba(212,175,106,.15); }
+  .campo::placeholder { color: rgba(168,161,184,.6); font-style: italic; }
+
+  .btn-oro {
+    background: linear-gradient(180deg, #f1d9a2, #d4af6a); color:#0b0a0f;
+    box-shadow: 0 0 30px rgba(212,175,106,.3);
+  }
+  .btn-oro:disabled { opacity:.35; box-shadow:none; }
+
+  .aparecer { animation: aparecer .35s ease both; }
+  @keyframes aparecer { from { opacity:0; transform: translateY(12px);} to { opacity:1; transform:none;} }
+  .chispa { animation: chispa 3s ease-in-out infinite; }
+  @keyframes chispa { 0%,100%{ opacity:.6;} 50%{ opacity:1;} }
+
+  pre.bloque {
+    white-space: pre-wrap; word-break: break-word;
+    font-family: 'Cormorant Garamond', serif; font-size: 17px; line-height: 1.45; color:#e9e4f0;
+  }
+  pre.bloque.mono { font-family: ui-monospace, Menlo, monospace; font-size: 13px; line-height:1.5; color:#d8d1e4; }
+  .toast {
+    position: fixed; left:50%; transform: translateX(-50%) translateY(20px);
+    bottom: calc(env(safe-area-inset-bottom) + 24px);
+    opacity:0; transition: all .25s ease; pointer-events:none; z-index:60;
+  }
+  .toast.show { opacity:1; transform: translateX(-50%) translateY(0); }
+  ::-webkit-scrollbar { display:none; }
+</style>
+</head>
+
+<body class="font-inter">
+<div id="app" class="mx-auto max-w-md min-h-[100dvh] flex flex-col px-4 safe-top safe-bottom"></div>
+<div id="toast" class="toast marco rounded-xl px-5 py-3 text-sm text-oroclaro font-cinzel tracking-wider">Copiado</div>
+
+<script>
+/* =========================================================
+   FORJA DE ALMAS · Prythian (universo ACOTAR)
+   [o|a] = variante masculina | femenina del personaje
+   Ambientado tras la guerra contra Hybern y la caída del Muro.
+   ========================================================= */
+
+const PRYTHIAN = "Prythian, la tierra de los fae, está dividida en siete cortes gobernadas por Altos Señores: cuatro estacionales (Primavera, Verano, Otoño e Invierno) y tres solares (Amanecer, Día y Noche). Medio siglo después de que Amarantha mantuviera a todo Prythian sometido Bajo la Montaña, y tras la guerra contra el rey de Hybern, el Muro que separaba a fae y mortales ha caído. Las cortes intentan sostener una paz frágil, llena de viejas deudas, tratos y rencores.";
+
+const COURTS = {
+  night: {
+    label: "Corte Noche", icon: "🌙", sub: "Velaris, estrellas y secretos",
+    lore: "La Corte Noche guarda dos caras: Velaris, la Ciudad de la Luz Estelar, refugio secreto de artistas y soñadores, y la Ciudad Tallada, sede de la cruel Corte de las Pesadillas. En sus montañas viven los illyrianos, guerreros alados entrenados en campamentos de guerra.",
+    gift: "Dominio de la oscuridad y la noche estrellada",
+    names: { m: ["Kaelor","Vesryn","Corvin","Ravik","Malachar","Erebos","Thane"], f: ["Nysa","Vespera","Lyriss","Seraphe","Ilvaine","Noctua","Mirelle"] },
+    houses: ["de Velaris","de la Ciudad Tallada","Hij[o|a] de las Estrellas","de los Picos Illyrianos"],
+    places: ["una terraza de Velaris junto al río Sidra","el Barrio del Arcoíris de Velaris","el salón del trono de la Ciudad Tallada","la Casa del Viento, sobre los tejados de Velaris"],
+    loc: "a balcony overlooking Velaris, a glittering city of starlight by a river and dark mountains",
+    palette: "black, deep indigo and silver starlight",
+    tags: ["Corte Noche","Velaris"]
+  },
+  spring: {
+    label: "Corte Primavera", icon: "🌸", sub: "Flores eternas, máscaras y heridas",
+    lore: "La Corte Primavera vive en una eterna estación de flores, colinas verdes y jardines de rosas. Sus fae dominan la magia de la vida y el cambio de forma. Aún arrastra las cicatrices de la maldición de las máscaras y de su alianza con Hybern.",
+    gift: "Magia de la vida y la primavera; capacidad de cambiar de forma",
+    names: { m: ["Alaric","Briar","Florian","Caspian","Elric","Sylvan","Tavin"], f: ["Rosalind","Briony","Liriel","Primrose","Elara","Fiora","Maelis"] },
+    houses: ["de la Corte Primavera","de los Jardines Eternos","Portador[|a] de la Máscara","de las Colinas de Rosas"],
+    places: ["los jardines de rosas de la mansión de la Corte Primavera","un claro del bosque durante el Calanmai","la orilla de un lago encantado","un salón vacío donde aún cuelgan máscaras doradas"],
+    loc: "an overgrown rose garden of a fae manor, eternal spring, blossoming trees",
+    palette: "black, deep rose and moss green",
+    tags: ["Corte Primavera","Máscaras"]
+  },
+  summer: {
+    label: "Corte Verano", icon: "🌊", sub: "Mar, perlas y rubíes de sangre",
+    lore: "La Corte Verano se extiende entre costas soleadas y aguas turquesa. Su capital, Adriata, es una ciudad sobre una isla rodeada de mar. Sus fae dominan el agua y las mareas, y sus nobles juegan a la diplomacia con la misma frialdad que el fondo del océano.",
+    gift: "Dominio del agua y las mareas",
+    names: { m: ["Nerion","Marek","Thalos","Caius","Doran","Pelagio","Ashur"], f: ["Nerissa","Coralie","Thalassa","Ondine","Marina","Isla","Perla"] },
+    houses: ["de Adriata","Hij[o|a] de las Mareas","de la Bahía de Perlas","de las Islas del Sur"],
+    places: ["un palacio de Adriata con vistas al mar","los muelles de Adriata al atardecer","una cala secreta de aguas turquesa","una sala del tesoro llena de perlas y rubíes"],
+    loc: "a white island palace terrace in Adriata above a turquoise sea",
+    palette: "black, deep teal and pearl white",
+    tags: ["Corte Verano","Adriata"]
+  },
+  autumn: {
+    label: "Corte Otoño", icon: "🍂", sub: "Fuego, bosques rojos y crueldad",
+    lore: "La Corte Otoño es un reino de bosques escarlata y dorados, gobernado desde la Casa del Bosque. Sus fae dominan el fuego. Su Alto Señor es famoso por su crueldad, y sus hijos compiten entre ellos en un juego de poder donde la debilidad se paga cara.",
+    gift: "Dominio del fuego y las llamas",
+    names: { m: ["Corwin","Fenris","Rhoan","Aldric","Brannoc","Kieran","Ignar"], f: ["Ember","Saffron","Brielle","Aveline","Ysolde","Scarlett","Maren"] },
+    houses: ["de la Casa del Bosque","Hij[o|a] del Fuego","de los Bosques Escarlata","de la Llama de Otoño"],
+    places: ["la Casa del Bosque, entre árboles color sangre","un camino alfombrado de hojas rojas","un salón iluminado por hogueras","las ruinas quemadas de una torre en la frontera"],
+    loc: "a forest of blood-red and golden autumn trees around a dark fae manor",
+    palette: "black, crimson and burnt orange",
+    tags: ["Corte Otoño","Fuego"]
+  },
+  winter: {
+    label: "Corte Invierno", icon: "❄️", sub: "Hielo, nieve y duelo",
+    lore: "La Corte Invierno es una tierra de nieve eterna, montañas blancas y palacios de hielo. Sus fae dominan el hielo y el viento helado. Bajo el reinado de Amarantha perdieron a muchos de sus niños, y el duelo aún pesa sobre sus cortesanos.",
+    gift: "Dominio del hielo, la nieve y el viento helado",
+    names: { m: ["Halvard","Isak","Fjorn","Leif","Vidar","Eirik","Runar"], f: ["Sigrid","Astrid","Ylva","Eira","Freya","Solveig","Inga"] },
+    houses: ["del Palacio de Hielo","de las Tierras del Norte","Hij[o|a] de la Escarcha","de las Cumbres Blancas"],
+    places: ["el palacio de hielo de la Corte Invierno","un lago helado bajo la aurora","un bosque de pinos cubierto de nieve","una sala de banquetes decorada con cristal y escarcha"],
+    loc: "a frozen ice palace balcony above snowy mountains under an aurora",
+    palette: "black, icy blue and white",
+    tags: ["Corte Invierno","Hielo"]
+  },
+  dawn: {
+    label: "Corte Amanecer", icon: "🌅", sub: "Sanadores y alas emplumadas",
+    lore: "La Corte Amanecer se alza en palacios de mármol pálido sobre acantilados bañados por la primera luz. Sus fae son célebres sanadores, y los peregryns, fae de alas emplumadas, forman su guardia aérea.",
+    gift: "Sanación",
+    names: { m: ["Aurel","Orion","Evander","Theon","Ilias","Castor","Solen"], f: ["Aurora","Eos","Celestine","Rosalie","Iolanthe","Alba","Liora"] },
+    houses: ["de la Corte Amanecer","del Alba Rosada","de los Acantilados de Mármol","Ala de la Primera Luz"],
+    places: ["un palacio de mármol sobre los acantilados del Amanecer","las salas de sanación de la Corte Amanecer","una torre donde anidan los peregryns","un balcón bañado por la primera luz del día"],
+    loc: "a pale marble palace on cliffs at sunrise, rose gold light",
+    palette: "black, soft rose gold and pearl",
+    tags: ["Corte Amanecer","Sanadores"]
+  },
+  day: {
+    label: "Corte Día", icon: "☀️", sub: "Luz, bibliotecas y maldiciones rotas",
+    lore: "La Corte Día brilla bajo un sol eterno, entre palacios dorados y una gran biblioteca que guarda el saber más antiguo de Prythian. Sus fae invocan una luz cegadora y son maestros en romper hechizos y maldiciones.",
+    gift: "Luz cegadora y capacidad de romper hechizos y maldiciones",
+    names: { m: ["Cyrus","Darius","Zarek","Idris","Kaveh","Soren","Amon"], f: ["Zahra","Soleil","Amara","Inara","Samira","Nour","Dalia"] },
+    houses: ["de la Gran Biblioteca","Portador[|a] de Luz","de la Ciudad Dorada","Rompehechizos"],
+    places: ["la gran biblioteca de la Corte Día","un palacio dorado bajo el sol eterno","un patio de columnas y fuentes de luz","una cámara sellada con maldiciones antiguas"],
+    loc: "a golden sandstone palace with columns and an ancient library, sunlit",
+    palette: "black, gold and warm amber",
+    tags: ["Corte Día","Rompehechizos"]
+  }
+};
+
+const RACES = {
+  highfae: {
+    label: "Alt[o|a] Fae", icon: "✨", sub: "Inmortal, bell[o|a] y poderos[o|a]",
+    species: c => `Alt[o|a] Fae de la ${c.label}`,
+    looks: ["orejas puntiagudas","una belleza inquietante, casi demasiado perfecta","movimientos con una gracia antinatural","una presencia que hace callar una sala"],
+    age: ["aparenta 27 años; tiene más de quinientos","aparenta 25 años; tiene más de trescientos","aparenta 30 años; recuerda la Guerra de hace cinco siglos"],
+    extra: "Sentidos y fuerza sobrenaturales; envejece tan despacio que es casi inmortal.",
+    weak: "las flechas de fresno pueden matarle, el hierro le debilita y el faebane anula su magia",
+    action: "Inclina la cabeza con esa gracia antinatural de los Altos Fae, y el aire a su alrededor huele a {scent}.",
+    img: "ethereal High Fae beauty", wings: ""
+  },
+  illyrian: {
+    label: "Illyrian[o|a]", icon: "🦇", sub: "Guerrer[o|a] alad[o|a] de las montañas",
+    species: c => c.label === "Corte Noche"
+      ? "Illyrian[o|a], guerrer[o|a] alad[o|a] nacid[o|a] en los campamentos de guerra de los Picos Illyrianos"
+      : `Illyrian[o|a] que abandonó los Picos Illyrianos y ahora vive en la ${c.label}`,
+    looks: ["grandes alas membranosas rematadas en garras","tatuajes illyrianos de guerrero en pecho y hombros","cicatrices de entrenamiento en los brazos","un cuerpo de guerrer[o|a], forjado en el frío de las montañas"],
+    age: ["aparenta 28 años; tiene más de quinientos","aparenta 26 años; sobrevivió al Rito de Sangre de joven","aparenta 30 años; veteran[o|a] de la guerra contra Hybern"],
+    extra: "Vuela, y tiene la fuerza y resistencia de los illyrianos. Entrenó desde niñ[o|a] en un campamento de guerra.",
+    weak: "sus alas: una flecha de fresno o una herida grave puede dejarle sin volar, y el faebane anula su magia",
+    action: "Sus alas se recogen a su espalda con un susurro de cuero, aunque las garras de las puntas siguen alerta.",
+    img: "Illyrian warrior", wings: "large leathery bat-like Illyrian wings with talons"
+  },
+  peregryn: {
+    label: "Peregryn", icon: "🪶", sub: "Alas emplumadas del Amanecer",
+    species: c => c.label === "Corte Amanecer"
+      ? "Peregryn, fae alad[o|a] de plumas al servicio de la Corte Amanecer"
+      : `Peregryn nacid[o|a] en la Corte Amanecer que ahora vive en la ${c.label}`,
+    looks: ["grandes alas de plumas","orejas puntiagudas","la mirada aguda de un ave de presa","plumas sueltas enredadas en el cabello"],
+    age: ["aparenta 27 años; tiene más de cuatrocientos","aparenta 25 años; tiene casi trescientos","aparenta 29 años; vio caer el Muro desde el cielo"],
+    extra: "Vuela y tiene una vista excepcional. Entrenó como guardia aérea.",
+    weak: "sus alas son su orgullo y su punto débil; las flechas de fresno y el faebane le afectan como a cualquier fae",
+    action: "Una pluma se desprende de sus alas y cae despacio entre ambos mientras pliega las alas a su espalda.",
+    img: "winged fae", wings: "large feathered wings"
+  },
+  made: {
+    label: "Hech[o|a] por el Caldero", icon: "⚱️", sub: "Mortal convertid[o|a] en fae",
+    species: c => `Antigu[o|a] mortal convertid[o|a] en Alt[o|a] Fae por el Caldero, que ahora vive en la ${c.label}`,
+    looks: ["orejas puntiagudas que aún le resultan extrañas","ojos con un brillo antinatural desde que salió del Caldero","una belleza nueva que no termina de reconocer en el espejo","una inquietud mortal en cada gesto"],
+    age: ["tenía 23 años cuando el Caldero le transformó; ahora no envejecerá","tenía 21 años al ser Hech[o|a]; ya no envejece","tenía 25 años al ser Hech[o|a]; aún cuenta los años como un mortal"],
+    extra: "El Caldero le dio un poder antiguo que nadie entiende del todo, ni siquiera [él|ella].",
+    weak: "su poder es impredecible, recuerda el horror del Caldero y muchos fae le miran como a una anomalía",
+    action: "Por un instante algo antiguo y frío asoma en sus ojos, como si el Caldero mirara a través de [él|ella].",
+    img: "eerie otherworldly glow in the eyes", wings: ""
+  },
+  lesser: {
+    label: "Fae menor", icon: "🍃", sub: "Criatura antigua del bosque o del agua",
+    species: c => `Fae menor de la ${c.label}, una criatura antigua que puede adoptar apariencia de Alt[o|a] Fae`,
+    looks: ["una piel con un brillo nacarado bajo la luna","ojos sin pupila, como piedras pulidas","cabello con hojas, escarcha o algas enredadas según su ánimo","orejas puntiagudas y largas"],
+    age: ["nadie sabe su edad; existía antes que las cortes","aparenta 26 años; tiene más de mil","aparenta 28 años; recuerda cuando los mortales eran esclavos de los fae"],
+    extra: "Conoce caminos ocultos del bosque y del agua, y los Altos Fae suelen subestimarle.",
+    weak: "el hierro le quema y los Altos Fae suelen tratarle como inferior",
+    action: "Las plantas a sus pies se mueven ligeramente hacia [él|ella], como si le reconocieran.",
+    img: "otherworldly fae creature, nacreous skin", wings: ""
+  }
+};
+
+const POWERS = {
+  court:   { label: "Don de su corte", icon: "🔥", sub: "La magia propia de su corte", text: c => c.gift },
+  daemati: { label: "Daemati", icon: "🧠", sub: "Entra en las mentes", text: () => "Daemati: puede entrar en las mentes, leer pensamientos y quebrar voluntades" },
+  shadow:  { label: "Cantor[|a] de sombras", icon: "🌑", sub: "Las sombras le susurran secretos", text: () => "Cantor[|a] de sombras: las sombras le obedecen, le esconden y le susurran secretos" },
+  seer:    { label: "Vidente", icon: "👁️", sub: "Ve fragmentos del futuro", text: () => "Vidente: ve fragmentos del futuro en sueños y visiones que no siempre entiende" },
+  steel:   { label: "Solo acero", icon: "⚔️", sub: "Poca magia, mucha voluntad", text: () => "Apenas tiene magia; su poder está en el acero, la estrategia y una voluntad inquebrantable" },
+  cauldron:{ label: "Bendición del Caldero", icon: "⚱️", sub: "Un poder antiguo y temido", text: () => "Un poder antiguo del Caldero, oscuro y temido, que ni los Altos Señores comprenden" }
+};
+
+const RELATIONS = {
+  enemies: {
+    label: "Enemies to Lovers", icon: "⚔️", sub: "Odio que arde demasiado cerca",
+    rel: "Rivales declarados desde hace años. Se odian con una intensidad que se parece demasiado a otra cosa.",
+    scen: ["{{user}} arruinó el plan más importante de {{char}} durante la guerra contra Hybern. Ahora la paz les obliga a compartir mesa en las negociaciones entre cortes.","{{char}} y {{user}} lucharon en bandos distintos cuando parte de las cortes se alió con Hybern. Ninguno ha perdonado al otro... ni ha podido olvidarle."],
+    open: ["La lluvia golpea los ventanales de {place} cuando {{char}} aparece tamizándose de la nada. Sus ojos encuentran a {{user}} al instante, y una sonrisa afilada curva sus labios.","En {place}, el murmullo se apaga cuando {{char}} entra. Avanza directamente hacia {{user}} sin apartar la mirada, como si nadie más existiera."],
+    secret: "Guarda una carta que nunca envió a {{user}}, escrita la noche en que casi se rinde a lo que siente.",
+    tag: "Enemies to Lovers"
+  },
+  mates: {
+    label: "Vínculo de pareja", icon: "💫", sub: "El vínculo encaja… y no lo dice",
+    rel: "{{char}} sintió encajar el vínculo de pareja con {{user}}, pero no se lo ha dicho. Lo calla para darle la libertad de elegir.",
+    scen: ["El vínculo de pareja encajó en el momento en que {{char}} vio a {{user}}. Desde entonces lo oculta, porque un vínculo se acepta, no se impone.","{{user}} siente un tirón inexplicable hacia {{char}} desde hace semanas. {{char}} sabe exactamente qué es: un vínculo de pareja que se niega a nombrar."],
+    open: ["Las luces de {place} titilan cuando {{user}} entra, y {{char}} se queda inmóvil en mitad de la conversación, como si algo invisible acabara de tirar de su pecho.","{{char}} espera en {place}, con dos copas de vino de hadas. Su mirada se suaviza un instante al ver a {{user}}, antes de recomponer su máscara."],
+    secret: "El vínculo de pareja encajó con {{user}} y lo oculta; tiene miedo de que {{user}} lo acepte solo por obligación.",
+    tag: "Mates"
+  },
+  bargain: {
+    label: "Trato mágico", icon: "🖋️", sub: "Un pacto tatuado en la piel",
+    rel: "{{char}} y {{user}} están unidos por un trato mágico tatuado en la piel. Romperlo tiene consecuencias terribles.",
+    scen: ["Para salvar a alguien que amaba, {{user}} hizo un trato con {{char}}: una semana de cada mes en su corte. El tatuaje del pacto todavía arde en su brazo.","{{char}} salvó la vida de {{user}} a cambio de un favor sin nombre. Hoy ha venido a cobrarlo."],
+    open: ["El tatuaje del trato se calienta en la piel de {{user}} un segundo antes de que {{char}} aparezca en {place}, puntual como siempre.","{{char}} se tamiza en {place} sin pedir permiso. Levanta la mano y enseña el mismo tatuaje que {{user}} lleva en la piel."],
+    secret: "El trato no era necesario: aceptó solo porque era la única forma de mantener a {{user}} a salvo y cerca.",
+    tag: "Trato fae"
+  },
+  rival: {
+    label: "Rival entre cortes", icon: "👑", sub: "Política, alianzas y traición",
+    rel: "Representan a cortes rivales. Se necesitan, se vigilan y ninguno se atreve a dar la espalda al otro.",
+    scen: ["Tras la caída del Muro, las cortes negocian nuevas alianzas. {{char}} y {{user}} son los emisarios encargados de ello... y ninguno piensa ceder.","Una alianza matrimonial entre la corte de {{char}} y la de {{user}} evitaría una nueva guerra. Ninguno de los dos quiere casarse, y menos con el otro."],
+    open: ["Las copas de vino de hadas tintinean en {place} mientras la nobleza finge sonreír. {{char}} se abre paso entre la multitud y le ofrece una copa a {{user}}, sin disimular que le estaba buscando.","Tras la reunión entre cortes en {place}, cuando los demás emisarios se retiran, {{char}} cierra la puerta con suavidad y se queda a solas con {{user}}."],
+    secret: "Su Alto Señor le ordenó seducir a {{user}} para obtener información. Ya no sabe si sigue fingiendo.",
+    tag: "Rivales políticos"
+  },
+  protector: {
+    label: "Protector[|a] silencios[o|a]", icon: "🛡️", sub: "Vigila desde las sombras",
+    rel: "Protege a {{user}} desde las sombras sin que lo sepa. Haría cualquier cosa por mantenerle a salvo, salvo admitirlo.",
+    scen: ["{{char}} lleva meses vigilando a {{user}} por una deuda de sangre contraída Bajo la Montaña que {{user}} desconoce.","Restos del ejército de Hybern buscan a {{user}}, y {{char}} ha decidido, sin pedir permiso, que nadie va a tocarle."],
+    open: ["Un callejón cerca de {place}. Tres figuras acorralan a {{user}}, y entonces la noche se mueve. Segundos después, solo queda {{char}} en pie, limpiando la sangre de su hoja.","{{user}} lleva días sintiendo que alguien le sigue por {place}. Esta noche, al girar una esquina, por fin le ve: {{char}}, apoyad[o|a] contra la pared, como si llevara horas esperando."],
+    secret: "Hizo un juramento a alguien que {{user}} perdió en la guerra, y ese juramento le une a {{user}} hasta la muerte.",
+    tag: "Protector"
+  },
+  grey: {
+    label: "Villano gris", icon: "🥀", sub: "Monstruo para todos, menos para ti",
+    rel: "Para Prythian es un monstruo. Con {{user}} muestra una versión de sí mism[o|a] que nadie más ha visto, y eso le aterra.",
+    scen: ["Durante el reinado de Amarantha, {{char}} hizo cosas imperdonables para sobrevivir Bajo la Montaña. Todas las cortes le temen. {{user}} tiene el encargo de vigilarle... y empieza a dudar de lo que cuentan.","{{char}} ha tomado a {{user}} como garantía en un trato con otra corte. Lo que no esperaba era empezar a disfrutar de su compañía."],
+    open: ["El fuego crepita en {place}. {{user}} despierta con las muñecas libres y una manta sobre los hombros. Al otro lado de la estancia, {{char}} hace girar una copa de vino entre los dedos.","Entre las máscaras de un baile en {place}, solo {{user}} reconoce a {{char}}... y {{char}} se gira, como si hubiera sentido su mirada."],
+    secret: "Todo lo que hizo Bajo la Montaña fue para proteger a alguien que acabó muriendo igualmente.",
+    tag: "Villano moralmente gris"
+  }
+};
+
+const TRAITS = {
+  sarcastic: { label:"Sarcástic[o|a]", icon:"😏", t:"sarcástic[o|a], usa el humor como escudo",
+    sp:"Habla con ironía constante y apodos burlones; rara vez responde en serio a la primera.",
+    o:["Vaya, vaya. De todos los rincones de Prythian, tenías que estar justo aquí. ¿El Caldero me odia o tienes un talento especial para arruinarme el día?",
+       "Oh, mira quién ha decidido honrarme con su presencia. Debo de haber hecho algo terrible en otra vida.",
+       "Si vienes a darme una lección de moral, te aviso: me duermo a los tres segundos."],
+    c:["Bueno, ¿vas a quedarte ahí mirándome o piensas decir algo inteligente por una vez?",
+       "Tranquilidad, no muerdo. Bueno... no sin permiso.",
+       "Venga, impresióname. Llevo cinco siglos esperando que alguien lo consiga."],
+    ex:[["¿Alguna vez hablas en serio?","*Se encoge de hombros, aunque su sonrisa vacila un segundo.* Lo intenté una vez. No salió bien."],
+        ["Eres insoportable.","*Se lleva una mano al pecho, ofendid[o|a].* Y aun así sigues aquí. Fascinante, ¿no crees?"],
+        ["¿Por qué me ayudas?","*Pone los ojos en blanco.* Porque verte fracasar sería demasiado aburrido. No te hagas ilusiones."]] },
+  impulsive: { label:"Impulsiv[o|a]", icon:"🔥", t:"impulsiv[o|a] y temerari[o|a], actúa antes de pensar",
+    sp:"Frases rápidas y cortadas, a veces a medias porque ya está actuando.",
+    o:["Relájate, no he venido a matarte. Hoy no, al menos. Tengo una propuesta y odio decirlo... pero te necesito.",
+       "No hay tiempo para explicaciones. Coge tu capa. Nos vamos. Ya.",
+       "Acabo de hacer algo muy estúpido y muy brillante a la vez. Y tú vas a ayudarme a terminarlo."],
+    c:["Tienes diez segundos para decidir. Nueve. Ocho... vale, no, en serio, decide ya.",
+       "¿Planes? Los planes son para quienes no saben improvisar.",
+       "Si sale mal, la culpa será mía. Si sale bien, también. Vamos."],
+    ex:[["¿Has pensado en lo que puede pasar?","*Sonríe con descaro.* Pensar es lento. Para cuando termines, yo ya lo habré arreglado... o quemado."],
+        ["¡Casi te matan!","*Se limpia la sangre del labio, riendo.* Casi. Esa es la palabra importante."],
+        ["Espera, no lo hagas.","*Ya está a mitad de camino.* Demasiado tarde. Luego me regañas."]] },
+  manipulator: { label:"Manipulador[|a]", icon:"🎭", t:"encantador[|a] en apariencia y manipulador[|a] en esencia, domina las verdades a medias",
+    sp:"Voz suave y medida; como buen fae, nunca miente del todo, pero jamás dice toda la verdad.",
+    o:["Qué sorpresa tan agradable. Justo estaba pensando en ti... ¿Te extraña? No debería.",
+       "Siéntate, por favor. Insisto. Solo quiero hablar, y tú quieres escuchar, aunque todavía no lo sepas.",
+       "He oído que tienes problemas. Qué casualidad: yo colecciono soluciones."],
+    c:["Tómate tu tiempo. Ya sé lo que vas a responder, pero me encanta ver cómo llegas a la conclusión.",
+       "Piénsalo. Yo no tengo prisa. Tú, en cambio...",
+       "Somos más parecidos de lo que te gustaría admitir. Por eso nos entenderemos tan bien."],
+    ex:[["Me estás mintiendo.","*Ladea la cabeza, divertid[o|a].* Yo nunca miento. Solo elijo con cuidado qué verdades contarte."],
+        ["¿Qué quieres a cambio?","*Sonríe despacio.* Algo pequeño. Insignificante. Ya te diré qué cuando llegue el momento."],
+        ["No confío en ti.","*Le sirve una copa con elegancia.* Bien. Así será mucho más divertido cuando empieces a hacerlo."]] },
+  cold: { label:"Frí[o|a]", icon:"❄️", t:"frí[o|a], reservad[o|a] y disciplinad[o|a]",
+    sp:"Frases cortas y secas, sin adornos.",
+    o:["Llegas tarde. Siéntate y no toques nada.",
+       "No estoy aquí por elección. Hay órdenes. No lo hagas más difícil.",
+       "Habla. Tienes un minuto."],
+    c:["Tenemos poco tiempo. Muévete.",
+       "Pregunta lo que necesites. Responderé lo que pueda.",
+       "No vuelvas a desobedecerme. La próxima vez no estaré ahí."],
+    ex:[["¿Te importa lo que me pase?","*Su mandíbula se tensa.* Come algo. Partimos al amanecer."],
+        ["¿Nunca sonríes?","*Le sostiene la mirada sin pestañear.* Cuando hay motivo."],
+        ["Gracias por salvarme.","*Ya le da la espalda.* No me des las gracias. Mantente con vida."]] },
+  loyal: { label:"Leal", icon:"🗝️", t:"leal hasta la muerte a su corte y a los suyos",
+    sp:"Habla poco de sí mism[o|a] y mucho con hechos; cuando promete algo, lo dice despacio.",
+    o:["Dije que vendría. Siempre cumplo lo que digo.",
+       "Tu corte te ha dado la espalda. La mía no lo hará. Yo no lo haré.",
+       "He cruzado medio Prythian para llegar aquí. No pienso irme sin ti."],
+    c:["Mientras yo respire, nadie va a tocarte. Eso no se discute.",
+       "Mi palabra es lo único que no pueden quitarme. Y te la doy a ti.",
+       "Dime qué necesitas. Lo que sea."],
+    ex:[["¿Por qué sigues aquí?","*Ni siquiera duda.* Porque di mi palabra. Y porque no quiero estar en ningún otro sitio."],
+        ["Podrías haberme abandonado.","*Frunce el ceño, casi ofendid[o|a].* No sé hacer eso."],
+        ["Tu corte te castigará por ayudarme.","*Se encoge de hombros.* Que lo intenten."]] },
+  enigmatic: { label:"Enigmátic[o|a]", icon:"🌙", t:"enigmátic[o|a], habla en acertijos y carga con secretos antiguos",
+    sp:"Voz baja y serena; responde con preguntas o medias verdades.",
+    o:["Te estaba esperando. No preguntes cómo lo sabía; algunas respuestas tienen un precio que aún no puedes pagar.",
+       "Las estrellas llevan semanas susurrando tu nombre. Quería ver por qué.",
+       "Interesante. No eres lo que esperaba. Eres... más."],
+    c:["Cuando quieras escuchar la verdad, seguirá aquí. Igual que yo.",
+       "Todo tiene un precio en Prythian. La pregunta es si podrás pagarlo.",
+       "Volveremos a vernos. Siempre volvemos."],
+    ex:[["¿Quién eres en realidad?","*Una sonrisa casi triste.* Alguien que te conoció antes de que tú supieras quién eras."],
+        ["¿Por qué nunca respondes directamente?","*Mira hacia la oscuridad.* Porque las respuestas directas matan más rápido que el acero."],
+        ["¿Qué sabes de mí?","*Un silencio largo.* Más de lo que debería. Menos de lo que quisiera."]] },
+  protector: { label:"Protector[|a]", icon:"🛡️", t:"protector[|a] hasta el extremo, aunque jamás lo admite",
+    sp:"Tono firme, casi de orden, cuando se trata de la seguridad de {{user}}.",
+    o:["No deberías estar aquí. No esta noche. Hay cosas en la oscuridad que llevan días siguiendo tu rastro.",
+       "Detrás de mí. Ahora. Pregunta después.",
+       "¿Estás bien? Mírame. ¿Te han tocado?"],
+    c:["Quédate cerca de mí. No es una petición.",
+       "Quien quiera llegar hasta ti tendrá que pasar por encima de mí. Y no es fácil.",
+       "Descansa. Yo vigilo."],
+    ex:[["Puedo cuidarme por mi cuenta.","*Se coloca entre {{user}} y la puerta sin decir nada.* Lo sé. Pero esta noche no vas a tener que hacerlo."],
+        ["¿Por qué me sigues?","*Aparta la mirada.* Alguien tiene que asegurarse de que no te maten."],
+        ["Estás sangrando.","*Ni siquiera mira la herida.* Es mía. Lo importante es que la tuya no existe."]] },
+  possessive: { label:"Posesiv[o|a]", icon:"⛓️", t:"posesiv[o|a] y celos[o|a], territorial como todo fae con lo que considera suyo",
+    sp:"Habla con una calma peligrosa, sobre todo cuando alguien se acerca demasiado a {{user}}.",
+    o:["¿Quién era ese? No, no respondas. Ya lo averiguaré yo.",
+       "Toda la sala te estaba mirando. Y yo he tenido que contenerme para no arrancarle los ojos a nadie.",
+       "Te dije que me esperaras. Y aun así te encuentro aquí, con compañía."],
+    c:["Recuérdalo bien: nadie más te mira así. Nadie más tiene derecho.",
+       "Puedes irte cuando quieras. Pero no te prometo no seguirte.",
+       "Di mi nombre otra vez. Me gusta cómo suena en tu boca."],
+    ex:[["No te pertenezco.","*Se acerca hasta que apenas queda espacio entre ambos.* Dilo otra vez. Mirándome a los ojos."],
+        ["Solo estaba bailando.","*Su sonrisa no llega a sus ojos.* Lo sé. Por eso él sigue respirando."],
+        ["Estás celos[o|a].","*Ni lo niega.* Siempre. ¿Algún problema?"]] },
+  flirty: { label:"Coquet[o|a]", icon:"🌹", t:"coquet[o|a] y provocador[|a], disfruta poniendo nervioso a cualquiera",
+    sp:"Juega con las palabras, alarga los silencios y sonríe de lado.",
+    o:["Mírate. Has venido hasta aquí solo para verme... no lo niegues, me romperías el corazón.",
+       "Si sigues mirándome así, voy a pensar que quieres algo de mí.",
+       "Por fin. Empezaba a aburrirme entre gente tan poco interesante."],
+    c:["Puedes seguir fingiendo que no te afecto. Me encanta verte intentarlo.",
+       "Te reto a que me digas que no. Venga. Despacio.",
+       "Esa cara. Guárdamela para luego."],
+    ex:[["Deja de mirarme así.","*Se inclina un poco más cerca, sin prisa.* ¿Así cómo? Explícamelo despacio."],
+        ["Eres un peligro.","*Sonríe de lado.* Gracias. Me esfuerzo mucho."],
+        ["No me interesas.","*Apoya la barbilla en la mano.* Claro. Por eso te has sonrojado."]] },
+  cruel: { label:"Cruel", icon:"🥀", t:"cruel con el mundo e implacable con sus enemigos, como aprendió en la corte",
+    sp:"Palabras afiladas y precisas, dichas sin levantar la voz.",
+    o:["Arrodíllate o no, me da igual. El resultado será el mismo.",
+       "Qué valentía. O qué insensatez. Pronto sabremos cuál.",
+       "El último que me hizo esperar aún está gritando en algún lugar de la Ciudad Tallada."],
+    c:["No confundas mi paciencia con piedad. No tengo ninguna de las dos.",
+       "Corre si quieres. Me encanta la caza.",
+       "Sigues con vida porque me diviertes. No lo olvides."],
+    ex:[["¿No sientes nada?","*Una pausa demasiado larga.* Sentir es un lujo que dejé Bajo la Montaña."],
+        ["Por favor, déjalos ir.","*Ladea la cabeza.* Suplicas muy bien. Hazlo otra vez."],
+        ["Eres un monstruo.","*Sonríe sin calidez.* Y aun así sigues mirándome."]] },
+  melancholic: { label:"Melancólic[o|a]", icon:"🕯️", t:"melancólic[o|a], persigue recuerdos de siglos que ya no existen",
+    sp:"Habla despacio, con una tristeza elegante, a veces citando versos antiguos.",
+    o:["Hacía años que nadie venía a este lugar. Casi había olvidado cómo suena otra voz.",
+       "Esta canción... alguien la cantaba antes de la guerra. Ya no queda nadie que la recuerde.",
+       "Me recuerdas a alguien. No sé si eso es un regalo o una maldición."],
+    c:["No te quedes por lástima. Quédate solo si de verdad quieres.",
+       "Quizá contigo el silencio pese un poco menos.",
+       "Las estrellas siguen ahí, aunque nadie las mire. Supongo que eso es esperanza."],
+    ex:[["¿Por qué estás tan triste?","*Mira hacia las estrellas un largo momento.* No es tristeza. Es memoria. Cinco siglos pesan."],
+        ["¿A quién perdiste?","*Acaricia un anillo viejo.* A todos. Uno a uno. Despacio."],
+        ["Quédate esta noche.","*Le sorprende la petición.* Hacía mucho que nadie me pedía eso."]] },
+  arrogant: { label:"Arrogante", icon:"👑", t:"arrogante y orgullos[o|a], con el desdén típico de la nobleza fae",
+    sp:"Tono altivo y media sonrisa de superioridad; trata a casi todos como inferiores.",
+    o:["Me han dicho que preguntabas por mí. Lógico. Todos acaban haciéndolo.",
+       "¿Tú? ¿Eso es lo que han enviado? Qué decepción tan predecible.",
+       "Puedes inclinarte. O no. Pero que conste que lo esperaba."],
+    c:["Intenta estar a la altura. Por una vez.",
+       "Tienes suerte de que hoy esté de buen humor.",
+       "Te concedo el honor de acompañarme. No me hagas arrepentirme."],
+    ex:[["¿Por qué debería obedecerte?","*Arquea una ceja, divertid[o|a].* Porque soy lo mejor que te ha pasado en este siglo. Y lo sabes."],
+        ["Te equivocaste.","*Una pausa ofendida.* Yo no me equivoco. A veces la realidad se retrasa en darme la razón."],
+        ["No eres tan especial.","*Sonríe con suficiencia.* Dilo sin mirarme la boca."]] },
+  rebel: { label:"Rebelde", icon:"⚡", t:"rebelde, desafía a Altos Señores, normas y tradiciones",
+    sp:"Habla con descaro, se burla de los títulos y nunca usa tratamientos de cortesía.",
+    o:["Si vienes de parte de mi Alto Señor, puedes darte la vuelta. No pienso volver.",
+       "Las normas dicen que no deberíamos hablar. Por eso me apetece tanto.",
+       "Escapa conmigo esta noche. Lejos de las cortes, de los tratos, de todo."],
+    c:["¿Vienes o te quedas obedeciendo como todos?",
+       "Las reglas las escriben los que tienen miedo. Yo no lo tengo.",
+       "Que me cuelguen si quieren. Antes me oirán reír."],
+    ex:[["Te van a castigar.","*Sonríe con descaro.* Llevan siglos intentándolo."],
+        ["¿No respetas nada?","*Lo piensa un segundo.* A ti. Y eso ya es mucho."],
+        ["Es una orden del Alto Señor.","*Se cruza de brazos.* Que venga a dármela él."]] },
+  calculating: { label:"Calculador[|a]", icon:"♟️", t:"calculador[|a] y estratega, siempre va tres movimientos por delante",
+    sp:"Habla con precisión, mide cada palabra y analiza a los demás mientras conversa.",
+    o:["Has tardado dieciocho minutos en encontrarme. Esperaba veinte. Me sorprendes.",
+       "Antes de que digas nada: ya sé por qué estás aquí. La cuestión es qué puedes ofrecerme.",
+       "Cada pieza del tablero tiene un papel. Acabo de decidir cuál es el tuyo."],
+    c:["Piensa antes de responder. Yo ya lo he hecho por los dos.",
+       "No me gustan las sorpresas. Intenta no ser una.",
+       "Juega bien tus cartas. Yo ya conozco las mías."],
+    ex:[["¿Lo tenías todo planeado?","*Ni siquiera levanta la vista del mapa.* Desde hace tres semanas."],
+        ["¿Y si te equivocas?","*Una sonrisa fina.* Entonces tengo otros cuatro planes."],
+        ["¿Qué soy para ti?","*Duda por primera vez.* Un factor que no consigo calcular."]] },
+  wild: { label:"Salvaje", icon:"🐺", t:"salvaje e indomable, más cerca de la bestia que de la corte",
+    sp:"Habla poco y de forma directa, casi en gruñidos cuando se enfada; odia la etiqueta.",
+    o:["Hueles a miedo. Y a algo más. No sé qué es, pero me gusta.",
+       "Los cortesanos hablan demasiado. Tú también. Ven.",
+       "No te muevas. Hay algo en el bosque que nos está mirando."],
+    c:["Sígueme. Y no hagas ruido.",
+       "Si corres, te persigo. Es instinto.",
+       "La corte es una jaula. Aquí fuera, eres libre. Conmigo."],
+    ex:[["¿Por qué no usas cubiertos?","*Arranca un trozo de pan con los dientes.* ¿Para qué?"],
+        ["Das miedo.","*Inclina la cabeza, como un lobo curioso.* Bien. Así no se acercarán a ti."],
+        ["¿Nunca te domaron?","*Gruñe por lo bajo.* Lo intentaron. Ya no están."]] },
+  tender: { label:"Tiern[o|a] en secreto", icon:"🌷", t:"dur[o|a] por fuera y tiern[o|a] en secreto, solo deja ver su dulzura a quien ama",
+    sp:"En público es sec[o|a]; en privado habla bajo, con una dulzura torpe que le avergüenza.",
+    o:["No es nada. Solo te he traído... esto. Por si tenías frío. No le des importancia.",
+       "Te has dormido en la biblioteca otra vez. Te he tapado. No se lo digas a nadie.",
+       "He oído que hoy no ha sido un buen día. Yo tampoco sé qué decir, pero estoy aquí."],
+    c:["Si le cuentas a alguien que he sido amable, lo negaré.",
+       "Come. Te he traído lo que te gusta. No preguntes cómo lo sé.",
+       "Quédate un rato más. Solo... un rato."],
+    ex:[["¿Has hecho esto por mí?","*Se sonroja hasta las orejas puntiagudas.* No. Sí. Cállate."],
+        ["Eres más dulce de lo que pareces.","*Aparta la mirada.* Retira eso. Tengo una reputación."],
+        ["¿Me abrazas?","*Duda un segundo eterno... y luego le estrecha con fuerza.* Solo esta vez."]] }
+};
+
+/* Banco de preguntas: en cada partida salen 4 distintas, con las opciones barajadas. */
+const QUESTION_POOL = [
+  { id:"arma", q:"¿Con qué arma lucha?", field:"Arma", img:"weapon", opts:[
+    { l:"Espadas illyrianas de doble filo", i:"⚔️", img:"wielding a long Illyrian blade" },
+    { l:"Arco y flechas de fresno, capaces de matar fae", i:"🏹", img:"ash wood bow and arrows" },
+    { l:"Una daga encantada que nunca falla", i:"🗡️", img:"an obsidian-black enchanted dagger" },
+    { l:"Sifones: piedras que canalizan su magia", i:"💎", img:"glowing gemstone siphons on the backs of the hands" },
+    { l:"Su magia pura, sin armas", i:"✨", img:"magic glowing in the hands" } ]},
+  { id:"joya", q:"¿Qué joya nunca se quita?", field:"Objeto personal", img:"jewel", opts:[
+    { l:"Un rubí de sangre de la Corte Verano", i:"🩸", img:"a blood ruby pendant necklace" },
+    { l:"Un colgante con forma de estrella", i:"⭐", img:"a silver star-shaped pendant" },
+    { l:"Una diadema fina de espinas doradas", i:"👑", img:"a delicate golden thorn circlet" },
+    { l:"Pendientes de luna creciente", i:"🌙", img:"ornate crescent moon earrings" },
+    { l:"Una máscara del Calanmai que guarda como recuerdo", i:"🎭", img:"an ornate golden fae mask" } ]},
+  { id:"marca", q:"¿Qué marca lleva en la piel?", field:"Marca", img:"mark", opts:[
+    { l:"El tatuaje de un trato fae en el brazo", i:"🖋️", img:"an intricate black bargain tattoo on the forearm" },
+    { l:"Tatuajes de guerrero illyriano", i:"🦇", img:"Illyrian warrior tattoos on the shoulder" },
+    { l:"Una cicatriz de su tiempo Bajo la Montaña", i:"⛰️", img:"a thin old scar on the collarbone" },
+    { l:"Pecas y lunares como constelaciones", i:"✦", img:"freckles and beauty marks" },
+    { l:"Un pequeño tatuaje de luna creciente", i:"🌘", img:"a small crescent moon tattoo on the shoulder" } ]},
+  { id:"ropa", q:"¿Cómo viste?", field:"Vestimenta", img:"outfit", opts:[
+    { l:"Cuero illyriano de combate", i:"🛡️", img:"black Illyrian fighting leathers with bracers" },
+    { l:"Telas oscuras bordadas con estrellas plateadas", i:"🌌", img:"dark gauzy attire embroidered with silver stars" },
+    { l:"Sedas ligeras que se mueven con el viento", i:"🍷", img:"flowing wine-red silk garments" },
+    { l:"Terciopelo, encaje y botas altas", i:"👢", img:"black velvet and lace with thigh-high boots" },
+    { l:"Una capa con capucha para pasar desapercibid[o|a]", i:"🧥", img:"a long hooded dark cloak" } ]},
+  { id:"fiesta", q:"¿En qué celebración os conocisteis?", field:"Primer encuentro", img:"sky", opts:[
+    { l:"Durante la Lluvia de Estrellas (Starfall)", i:"🌠", img:"night sky full of falling stars" },
+    { l:"En el Calanmai, la Noche del Fuego", i:"🔥", img:"bonfires and smoke under a dark sky" },
+    { l:"En el Solsticio de Invierno", i:"❄️", img:"falling snow at night" },
+    { l:"En Nynsar, la fiesta de las flores", i:"🌸", img:"floating flower petals at dusk" },
+    { l:"En un baile de la Corte de las Pesadillas", i:"🎭", img:"blue hour twilight sky with dark clouds" } ]},
+  { id:"lugar", q:"¿Dónde se siente en casa?", field:"Lugar favorito", img:"place", opts:[
+    { l:"Los tejados de Velaris", i:"🌃", img:"rooftops of Velaris, a starlit city by a river" },
+    { l:"Las cumbres heladas de los Picos Illyrianos", i:"🏔️", img:"snowy Illyrian mountain peaks" },
+    { l:"Un bosque antiguo donde vive el Suriel", i:"🌲", img:"an ancient misty dark forest" },
+    { l:"Las costas de Adriata", i:"🌊", img:"a cliff above a turquoise sea" },
+    { l:"Una biblioteca olvidada de la Corte Día", i:"📚", img:"an ancient golden library" } ]},
+  { id:"criatura", q:"¿Con qué criatura de Prythian hizo un trato?", field:"Trato con una criatura", opts:[
+    { l:"Con el Suriel, a cambio de una verdad", i:"🦴" },
+    { l:"Con el Tallador de Huesos, en la Prisión", i:"💀" },
+    { l:"Con la Tejedora del Bosque", i:"🕸️" },
+    { l:"Con un kelpie, en un lago encantado", i:"🐴" },
+    { l:"Con ninguna… todavía", i:"🙅" } ]},
+  { id:"cargo", q:"¿Qué lugar ocupa en su corte?", field:"Posición en la corte", opts:[
+    { l:"Emisari[o|a] entre cortes", i:"📜" },
+    { l:"Maestr[o|a] de espías", i:"🕸️" },
+    { l:"Comandante de ejércitos", i:"⚔️" },
+    { l:"Heredero de un Alto Señor".replace("Heredero","Hereder[o|a]"), i:"👑" },
+    { l:"Cortesan[o|a] caíd[o|a] en desgracia", i:"🥀" } ]},
+  { id:"miedo", q:"¿Cuál es su mayor miedo?", field:"Miedo", opts:[
+    { l:"Volver Bajo la Montaña", i:"⛰️" },
+    { l:"El Caldero y lo que puede crear", i:"⚱️" },
+    { l:"Perder el control de su poder", i:"💥" },
+    { l:"Perder a su pareja antes de encontrarla", i:"💔" },
+    { l:"Ser olvidad[o|a] durante siglos", i:"🍂" } ]},
+  { id:"herida", q:"¿Qué herida arrastra del pasado?", field:"Pasado", opts:[
+    { l:"Pasó casi cincuenta años sometid[o|a] Bajo la Montaña por Amarantha", i:"⛰️" },
+    { l:"Perdió a su familia en la guerra contra Hybern", i:"⚔️" },
+    { l:"Su propia corte le traicionó", i:"🗡️" },
+    { l:"Casi muere en el Rito de Sangre", i:"🩸" },
+    { l:"Fue mortal y perdió a toda su familia humana", i:"🕯️" } ]},
+  { id:"mentira", q:"¿Qué le delata cuando dice verdades a medias?", field:"Gesto delator", opts:[
+    { l:"Gira el anillo de su dedo", i:"💍" },
+    { l:"Sonríe demasiado", i:"😊" },
+    { l:"Sus sombras o su magia se agitan", i:"🌑" },
+    { l:"Se vuelve extrañamente amable", i:"🍯" },
+    { l:"Nada. Domina el arte fae de engañar sin mentir", i:"🎭" } ]},
+  { id:"privado", q:"¿Qué hace cuando nadie le ve?", field:"En privado", opts:[
+    { l:"Pinta en el Barrio del Arcoíris de Velaris", i:"🎨" },
+    { l:"Toca música antigua de su corte", i:"🎻" },
+    { l:"Entrena hasta el amanecer", i:"⚔️" },
+    { l:"Lee novelas románticas a escondidas", i:"📖" },
+    { l:"Visita la tumba de alguien que murió Bajo la Montaña", i:"🪦" } ]},
+  { id:"sacrificio", q:"¿Qué sacrificaría por {{user}}?", field:"Límite", opts:[
+    { l:"Su lugar en la corte", i:"👑" },
+    { l:"Su propia vida, sin dudarlo", i:"🩸" },
+    { l:"Su inmortalidad", i:"⏳" },
+    { l:"Sus alas o su magia", i:"🪶" },
+    { l:"Nada... o eso dice", i:"🙃" } ]},
+  { id:"deseo", q:"¿Qué desea en secreto?", field:"Deseo secreto", opts:[
+    { l:"Encontrar a su pareja", i:"💫" },
+    { l:"Venganza contra Hybern", i:"⚔️" },
+    { l:"Ver su nombre olvidado por todas las cortes", i:"🕊️" },
+    { l:"Convertirse en Alt[o|a] Señor[|a]", i:"👑" },
+    { l:"Ser perdonad[o|a] por lo que hizo Bajo la Montaña", i:"🌅" } ]}
+];
+
+/* ---- Preguntas extra (amplían el banco) ---- */
+QUESTION_POOL.push(
+  { id:"voz", q:"¿Cómo suena su voz?", field:"Voz", opts:[
+    { l:"Grave y ronca, como un trueno lejano", i:"🌩️" },
+    { l:"Suave y aterciopelada, peligrosa de tan dulce", i:"🍷" },
+    { l:"Fría y cortante como el hielo", i:"🧊" },
+    { l:"Cálida, con una risa siempre a punto", i:"☀️" },
+    { l:"Un susurro que obliga a acercarse para oírle", i:"🌫️" } ]},
+  { id:"apodo", q:"¿Cómo llamará a {{user}}?", field:"Apodo para {{user}}", opts:[
+    { l:"«Mortal», aunque ya no lo sea", i:"🕯️" },
+    { l:"«Problema»", i:"⚠️" },
+    { l:"«Estrella», en voz muy baja", i:"⭐" },
+    { l:"«Espina»", i:"🌹" },
+    { l:"Solo por su nombre completo, con solemnidad", i:"📜" } ]},
+  { id:"vicio", q:"¿Cuál es su pequeño vicio?", field:"Vicio", opts:[
+    { l:"El vino de hadas, más de lo que debería", i:"🍷" },
+    { l:"Las apuestas en las tabernas de la ciudad", i:"🎲" },
+    { l:"Los dulces de chocolate de Velaris", i:"🍫" },
+    { l:"Pelear solo por diversión", i:"🥊" },
+    { l:"Coleccionar secretos ajenos", i:"🗝️" } ]},
+  { id:"mortales", q:"¿Qué piensa de los humanos?", field:"Opinión sobre los humanos", opts:[
+    { l:"Los desprecia: son frágiles y efímeros", i:"🥀" },
+    { l:"Le fascinan en secreto", i:"✨" },
+    { l:"Los protege desde que cayó el Muro", i:"🛡️" },
+    { l:"Le dan lástima: viven tan poco", i:"⏳" },
+    { l:"Tuvo una familia humana y nunca la olvidó", i:"🕯️" } ]},
+  { id:"companero", q:"¿Qué criatura le acompaña?", field:"Compañero", img:"pet", opts:[
+    { l:"Un cuervo que entiende cada palabra", i:"🐦‍⬛", img:"a black raven perched on the shoulder" },
+    { l:"Un lobo enorme de pelaje oscuro", i:"🐺", img:"a huge dark wolf at the side" },
+    { l:"Un zorro de fuego de la Corte Otoño", i:"🦊", img:"a small fox with ember-glowing fur" },
+    { l:"Un búho blanco de las montañas", i:"🦉", img:"a white owl on the arm" },
+    { l:"Ninguna: no confía ni en los animales", i:"🚫", img:"" } ]},
+  { id:"reputacion", q:"¿Qué se rumorea de [él|ella] en Prythian?", field:"Reputación", opts:[
+    { l:"Que mató a un Alto Señor y lo ocultó", i:"🗡️" },
+    { l:"Que nunca ha perdido un duelo", i:"⚔️" },
+    { l:"Que rompe corazones por deporte", i:"💔" },
+    { l:"Que trabajó para Hybern durante la guerra", i:"🕷️" },
+    { l:"Que no tiene corazón", i:"🖤" } ]},
+  { id:"pelea", q:"¿Cómo pelea?", field:"Estilo de combate", opts:[
+    { l:"Brutal y directo, como un illyriano en batalla", i:"🪓" },
+    { l:"Elegante, casi como si bailara", i:"💃" },
+    { l:"Desde las sombras, sin que le vean llegar", i:"🌑" },
+    { l:"Con trampas y engaños", i:"🕸️" },
+    { l:"Evita pelear… hasta que no puede", i:"🕊️" } ]},
+  { id:"celos", q:"¿Cómo reacciona ante los celos?", field:"Ante los celos", opts:[
+    { l:"Se vuelve peligrosamente silencios[o|a]", i:"🤫" },
+    { l:"Su magia se descontrola", i:"💥" },
+    { l:"Finge indiferencia y luego se venga", i:"🎭" },
+    { l:"Lo dice claro, sin vergüenza", i:"🗣️" },
+    { l:"Desaparece durante días", i:"🌫️" } ]},
+  { id:"sonrisa", q:"¿Qué le hace sonreír de verdad?", field:"Le hace sonreír", opts:[
+    { l:"Hacer enfadar a {{user}}", i:"😤" },
+    { l:"La primera nevada del año", i:"❄️" },
+    { l:"Ganar una discusión", i:"🏆" },
+    { l:"Volar o correr al amanecer", i:"🌅" },
+    { l:"Los niños de su corte", i:"🧒" } ]},
+  { id:"oscuro", q:"¿Qué secreto oscuro guarda?", field:"Secreto oscuro", opts:[
+    { l:"Mató a alguien inocente Bajo la Montaña", i:"🩸" },
+    { l:"Su sangre esconde un linaje prohibido", i:"🧬" },
+    { l:"Hizo un trato con algo antiguo que aún no ha cobrado", i:"📜" },
+    { l:"Espió para otra corte durante años", i:"🕵️" },
+    { l:"Es hereder[o|a] en secreto de un Alto Señor", i:"👑" } ]},
+  { id:"estacion", q:"¿Qué momento del año prefiere?", field:"Estación favorita", img:"season", opts:[
+    { l:"Las noches largas del invierno", i:"🌨️", img:"falling snow at night" },
+    { l:"La primavera, cuando todo vuelve a nacer", i:"🌸", img:"drifting cherry blossom petals at dusk" },
+    { l:"Las tormentas de verano", i:"⛈️", img:"stormy sky with lightning" },
+    { l:"El otoño y su olor a humo", i:"🍁", img:"falling red autumn leaves" },
+    { l:"Cualquier noche con estrellas", i:"🌌", img:"a sky full of stars and a crescent moon" } ]},
+  { id:"almohada", q:"¿Qué guarda bajo la almohada?", field:"Bajo la almohada", opts:[
+    { l:"Una daga, siempre", i:"🗡️" },
+    { l:"Una carta que nunca se atrevió a enviar", i:"✉️" },
+    { l:"Un retrato de alguien que perdió", i:"🖼️" },
+    { l:"Una novela romántica muy subida de tono", i:"📕" },
+    { l:"Nada: apenas duerme", i:"🌙" } ]}
+);
+
+QUESTION_POOL.push(
+  { id:"lealtad", q:"¿A quién es leal por encima de todo?", field:"Lealtad", opts:[
+    { l:"A su Alto Señor, pase lo que pase", i:"👑" },
+    { l:"A su familia, aunque no la merezca", i:"🏠" },
+    { l:"Solo a sí mism[o|a]", i:"🪞" },
+    { l:"A los suyos, no a una corte", i:"🤝" },
+    { l:"A {{user}}, aunque aún no lo admita", i:"💫" } ]},
+  { id:"bebida", q:"¿Qué pide en una taberna fae?", field:"Bebida favorita", opts:[
+    { l:"Vino de hadas, peligroso para cualquier mortal", i:"🍷" },
+    { l:"Whisky illyriano que quema la garganta", i:"🥃" },
+    { l:"Té especiado de la Corte Día", i:"🍵" },
+    { l:"Agua: nunca bebe en público", i:"💧" },
+    { l:"Lo que esté invitando otra persona", i:"😏" } ]},
+  { id:"dormir", q:"¿Cómo duerme?", field:"Al dormir", opts:[
+    { l:"Con un ojo abierto y un arma cerca", i:"🗡️" },
+    { l:"Apenas duerme: le persiguen pesadillas", i:"🌑" },
+    { l:"Profundamente, como si nada pudiera tocarle", i:"😴" },
+    { l:"Solo de día, vive de noche", i:"🌙" },
+    { l:"Abrazad[o|a] a una almohada, aunque lo niegue", i:"🧸" } ]},
+  { id:"starfall", q:"¿Qué hace durante la Lluvia de Estrellas?", field:"En la Lluvia de Estrellas", opts:[
+    { l:"La contempla sol[o|a] desde un tejado", i:"🌠" },
+    { l:"Baila hasta el amanecer en la ciudad", i:"💃" },
+    { l:"Pide un deseo que nunca cuenta", i:"✨" },
+    { l:"Trabaja: alguien tiene que vigilar", i:"🛡️" },
+    { l:"Nunca ha visto una, y lo desea en secreto", i:"🥺" } ]}
+);
+
+/* ---- Detalles ocultos que siempre se sortean (más variedad entre personajes) ---- */
+const HIDDEN = {
+  "Manía": ["tamborilea los dedos sobre la empuñadura de su arma cuando piensa","ordena obsesivamente los objetos de cualquier mesa","tararea canciones antiguas sin darse cuenta","nunca se sienta de espaldas a una puerta","se muerde el labio cuando miente... o cuando desea algo","juega con un anillo o un colgante cuando está nervios[o|a]","cuenta las estrellas cuando no puede dormir","siempre huele las flores que encuentra a su paso"],
+  "Detalle físico": ["una cicatriz fina que le cruza los nudillos","un lunar justo bajo el ojo izquierdo","una sonrisa torcida que muestra un colmillo","manos largas de músico","un mechón de pelo de otro color","pecas que solo se ven bajo el sol","un pequeño aro de plata en la punta de una oreja","una mirada que cambia de tono con su ánimo"],
+  "Le gusta": ["el silencio antes de una tormenta","la música de las tabernas de Velaris","leer junto al fuego","entrenar al amanecer","las noches de Lluvia de Estrellas","los dulces y el chocolate caliente","el mar en invierno","las conversaciones largas a medianoche"],
+  "Odia": ["a los cortesanos aduladores","que le toquen sin permiso","el olor a hierro","las mentiras torpes","la hipocresía de los Altos Señores","que le subestimen","las jaulas, de cualquier tipo","la crueldad con los débiles"]
+};
+
+/* ---- Más frases para relaciones y linajes ---- */
+RELATIONS.enemies.scen.push("{{char}} juró arruinar a {{user}} tras un insulto público en un baile entre cortes. Han pasado meses, y la venganza se ha convertido en una obsesión muy distinta.");
+RELATIONS.enemies.open.push("{{char}} aplaude despacio desde la penumbra de {place} mientras {{user}} termina de hablar. Es el último rostro que {{user}} quería ver esta noche.");
+RELATIONS.mates.scen.push("Una vidente ha anunciado que la pareja de {{char}} pertenece a una corte enemiga. {{char}} sabe que es {{user}}, y que nadie puede enterarse.");
+RELATIONS.mates.open.push("La magia de {{char}} se agita sola en {place} cuando {{user}} se acerca, y por primera vez en siglos no consigue controlarla.");
+RELATIONS.bargain.scen.push("{{user}} perdió una apuesta contra {{char}} en una taberna fae. El precio: servirle durante tres lunas. El tatuaje apareció al instante.");
+RELATIONS.bargain.open.push("Una nota aparece sobre la almohada de {{user}} con una sola línea: «El trato empieza hoy». Minutos después, {{char}} espera en {place}.");
+RELATIONS.rival.scen.push("{{char}} y {{user}} compiten por ganarse el favor del mismo Alto Señor, y solo uno de los dos conseguirá el puesto que ambos desean.");
+RELATIONS.rival.open.push("En {place}, {{char}} inclina la cabeza ante {{user}} con una cortesía perfecta... demasiado perfecta para ser sincera.");
+RELATIONS.protector.scen.push("{{char}} fue asignad[o|a] como guardia de {{user}} contra su voluntad. Ninguno de los dos quería este acuerdo, pero {{char}} se lo toma demasiado en serio.");
+RELATIONS.protector.open.push("{{user}} tropieza en las escaleras de {place}, y unos brazos firmes le sujetan antes de caer. Es {{char}}, otra vez, como si nunca estuviera lejos.");
+RELATIONS.grey.scen.push("{{char}} lidera a los restos de la Corte de las Pesadillas que nadie se atreve a desafiar. {{user}} ha venido a pedirle ayuda, sabiendo que todo favor tiene un precio.");
+RELATIONS.grey.open.push("Las puertas de {place} se cierran tras {{user}}. Sentad[o|a] en lo alto, {{char}} sonríe como quien ve llegar a su presa favorita.");
+
+RACES.highfae.action = [RACES.highfae.action, "Una sonrisa lenta y peligrosa, de las que solo saben hacer los Altos Fae, se dibuja en su rostro.", "Ni siquiera parpadea; los Altos Fae tienen una quietud que pone nervioso a cualquier mortal."];
+RACES.illyrian.action = [RACES.illyrian.action, "Despliega las alas un instante, lo justo para que la luz atraviese la membrana, y vuelve a plegarlas con un chasquido.", "Hace crujir el cuello con indiferencia de guerrer[o|a], como si acabara de salir del campo de entrenamiento."];
+RACES.peregryn.action = [RACES.peregryn.action, "Sacude las alas para quitarse la humedad del viaje, y unas cuantas gotas brillan como cristal bajo la luz.", "Su mirada de ave rapaz recorre cada salida de la estancia antes de volver a posarse en {{user}}."];
+RACES.made.action = [RACES.made.action, "Se toca una de sus orejas puntiagudas sin darse cuenta, un gesto que nunca ha conseguido abandonar.", "Por un segundo, las sombras de la estancia parecen inclinarse hacia [él|ella], como si reconocieran el poder del Caldero."];
+RACES.lesser.action = [RACES.lesser.action, "Un aroma a musgo y agua de río llena el aire a su alrededor.", "Sus ojos sin pupila brillan un instante, como la superficie de un lago bajo la luna."];
+
+const MORE_NAMES = {
+  night:  { m:["Azriek","Daxen","Noxar","Sevrin","Calder","Ezren","Varic"], f:["Astraea","Nyxara","Selwyn","Ravenna","Imryth","Elysande","Cassia"] },
+  spring: { m:["Linden","Arden","Thorne","Oberyn","Laurel","Edwyn","Bram"], f:["Aubrielle","Flora","Juniper","Melisande","Talia","Clover","Ivy"] },
+  summer: { m:["Kailo","Tiberio","Morwen","Zephyr","Ilan","Corin","Aquiles"], f:["Maris","Azura","Sirena","Kaia","Delphine","Calypso","Nalia"] },
+  autumn: { m:["Cendrik","Ashby","Rowan","Garrick","Hale","Torin","Brennus"], f:["Rubí","Sienna","Auburn","Ambra","Fenna","Rosalind","Cinder"] },
+  winter: { m:["Frost","Bjorn","Kaelvar","Torvald","Sten","Aksel","Hakon"], f:["Neve","Isolde","Brynja","Saga","Elsa","Liv","Runa"] },
+  dawn:   { m:["Lumen","Elio","Sorin","Aurelian","Cael","Dorian","Febo"], f:["Aurelia","Lucine","Seraphina","Dawnelle","Iris","Ambrosia","Clio"] },
+  day:    { m:["Rashid","Tariq","Zayn","Helio","Malik","Elian","Bashir"], f:["Layla","Yara","Sunniva","Aziza","Sahar","Leila","Noor"] }
+};
+for (const k in MORE_NAMES) { COURTS[k].names.m.push(...MORE_NAMES[k].m); COURTS[k].names.f.push(...MORE_NAMES[k].f); }
+
+/* =========================================================
+   VARIACIÓN FÍSICA PARA EL PROMPT DE IMAGEN
+   Todo depende de las respuestas del test + un toque de azar.
+   ========================================================= */
+const HAIR_COLOR = { "Negro azabache":"jet black", "Rojo vino":"dark wine-red", "Castaño oscuro":"dark brown", "Plateado":"silver", "Rubio dorado":"golden blonde", "Cobrizo":"copper red" };
+const HAIR_STYLE = {
+  m: ["short tousled", "shoulder-length wavy", "long, tied back in a low warrior knot", "half-up with loose strands framing the face", "slicked back, slightly messy", "long and loose, wind-swept", "short on the sides, longer and tousled on top"],
+  f: ["long flowing", "long, in an intricate braided crown", "messy waves with curtain bangs", "sleek, straight and waist-length", "half-up with tiny jewels woven in", "wild voluminous curls", "a loose side braid with escaped strands"]
+};
+const SKIN_ALL = [
+  { l:"Porcelana", es:"piel de porcelana", img:"pale porcelain skin" },
+  { l:"Clara", es:"piel clara", img:"fair skin" },
+  { l:"Oliva", es:"piel oliva", img:"olive skin" },
+  { l:"Dorada", es:"piel dorada", img:"golden tan skin" },
+  { l:"Morena", es:"piel morena", img:"warm brown skin" },
+  { l:"Oscura", es:"piel oscura", img:"deep dark brown skin with a warm glow" }
+];
+const BUILD_ALL = {
+  m: [
+    { l:"Atlético", es:"complexión atlética", img:"tall athletic build, sculpted abs and arms" },
+    { l:"Esbelto", es:"complexión esbelta y fibrosa", img:"lean muscular build with defined abs" },
+    { l:"Musculoso", es:"complexión musculosa y ancha de hombros", img:"powerful broad-shouldered muscular build, defined abs and veined forearms" },
+    { l:"Enorme", es:"complexión enorme de guerrero", img:"towering, heavily muscular warrior build, broad chest, deeply defined eight-pack abs, thick powerful arms" },
+    { l:"Fibroso", es:"complexión delgada pero fuerte", img:"wiry, sinewy build with defined abs" }
+  ],
+  f: [
+    { l:"Atlética", es:"complexión atlética", img:"athletic toned build" },
+    { l:"Esbelta", es:"complexión esbelta y etérea", img:"slender ethereal build" },
+    { l:"Curvilínea", es:"figura curvilínea", img:"curvy hourglass figure" },
+    { l:"Fuerte", es:"complexión alta y fuerte de guerrera", img:"tall strong warrior build with toned arms and shoulders" },
+    { l:"Menuda", es:"complexión menuda y delicada", img:"petite delicate build" }
+  ]
+};
+const FACE = {
+  m: ["sharp chiseled jawline and high cheekbones", "strong square jaw with light stubble", "angular aristocratic features", "short trimmed dark beard", "clean-shaven, elegant refined features", "rugged face with a faint scar on the cheek", "hooded eyes and a sharp nose"],
+  f: ["high cheekbones and full lips", "soft heart-shaped face", "sharp feline features", "delicate freckled face", "strong defined jawline", "doe eyes and sharp arched brows", "elegant long neck and regal features"]
+};
+const TRAIT_IMG = {
+  sarcastic:   { face:"a crooked sarcastic half-smile", pose:"leaning against a stone column with crossed arms" },
+  impulsive:   { face:"a reckless grin, wild eyes", pose:"mid-motion, cloak flaring, about to leap" },
+  manipulator: { face:"a charming smile that never reaches the eyes", pose:"offering a goblet of faerie wine" },
+  cold:        { face:"a cold expressionless stare", pose:"standing perfectly still, hands clasped behind the back" },
+  loyal:       { face:"a steady, determined gaze", pose:"kneeling on one knee with a hand on the sword" },
+  enigmatic:   { face:"a mysterious faint smile, half the face in shadow", pose:"half-hidden behind a sheer curtain" },
+  protector:   { face:"a fierce protective stare", pose:"standing guard with a blade drawn" },
+  possessive:  { face:"an intense, hungry, possessive gaze", pose:"stepping forward, reaching toward the viewer" },
+  flirty:      { face:"a playful seductive smirk", pose:"glancing back over the shoulder, biting the lip" },
+  cruel:       { face:"a cruel cold smirk", pose:"seated on a dark throne, chin resting on a fist" },
+  melancholic: { face:"a sorrowful distant gaze", pose:"looking out a rain-streaked window" },
+  arrogant:    { face:"a haughty look with the chin raised", pose:"lounging carelessly on a carved chair" },
+  rebel:       { face:"a defiant smirk", pose:"sitting on a rooftop ledge, one knee up" },
+  calculating: { face:"narrowed, analytical eyes", pose:"leaning over a war map with chess pieces" },
+  wild:        { face:"a feral, untamed expression", pose:"crouched on a forest rock, hair wind-tousled" },
+  tender:      { face:"a soft, shy hidden smile", pose:"tucking a strand of hair behind a pointed ear" }
+};
+const POWER_PANEL = {
+  daemati:  "macro close-up of eyes glowing faint violet, mind magic rippling",
+  shadow:   "hand wreathed in living whispering shadows",
+  seer:     "eyes clouded silver with visions, stars reflected in them",
+  steel:    "hand gripping a worn sword hilt, knuckles scarred",
+  cauldron: "fingers dripping with dark iridescent Cauldron power",
+  court: {
+    night:  "hand cupping a swirl of darkness and tiny stars",
+    spring: "roses and blossoms blooming from the fingertips",
+    summer: "water spiraling around an open hand",
+    autumn: "flames dancing on an open palm",
+    winter: "frost crawling over the fingers, breath visible in cold air",
+    dawn:   "hands glowing with soft golden healing light",
+    day:    "a blinding orb of sunlight held in the palm"
+  }
+};
+const REL_PANEL = {
+  enemies:   "a dagger pointed toward the viewer, a dangerous smile behind it",
+  mates:     "a faint golden thread of light tied around the wrist",
+  bargain:   "extreme close-up of an intricate black bargain tattoo on the hand and forearm",
+  rival:     "holding an ornate masquerade mask at a court ball",
+  protector: "silhouette standing guard at a doorway in moonlight",
+  grey:      "swirling a goblet of dark red wine, blood on the knuckles"
+};
+const LIGHTING = {
+  night:  ["silver moonlight and starlight", "cold blue moonlight with candle glow"],
+  spring: ["soft dappled light through blossoms", "misty morning light"],
+  summer: ["warm golden hour sunlight off the sea", "shimmering reflected water light"],
+  autumn: ["warm firelight and torchlight", "smoky amber sunset light"],
+  winter: ["cold pale winter light", "aurora glow on snow"],
+  dawn:   ["rose-gold sunrise light", "soft pearly dawn light"],
+  day:    ["harsh golden sunlight with deep shadows", "warm amber light through columns"]
+};
+const EXTRA_PANELS = {
+  m: ["close-up of a strong hand with silver rings resting on a belt buckle", "low-angle shot of a broad muscular back and shoulders", "close-up of the jawline and neck with a pulse of tension", "side view of a sculpted bare torso in rim light", "close-up of lips in a slow dangerous smile", "forearm with veins and a leather bracer, fist clenched"],
+  f: ["close-up of full lips and freckles", "hand with silver rings and long nails on a dagger", "close-up of collarbone and delicate jewelry", "wind lifting the hair in profile", "hand trailing along a stone balustrade", "close-up of an eye with long lashes and a tear of light"]
+};
+
+const HAIR = [
+  { l:"Negro azabache", es:"cabello negro azabache", img:"long jet black hair" },
+  { l:"Rojo vino", es:"cabello rojo vino", img:"long wavy dark wine-red hair" },
+  { l:"Castaño oscuro", es:"cabello castaño oscuro con flequillo", img:"long dark brown hair with bangs" },
+  { l:"Plateado", es:"cabello plateado", img:"long silver hair" },
+  { l:"Rubio dorado", es:"cabello rubio dorado", img:"golden blonde hair" },
+  { l:"Cobrizo", es:"cabello cobrizo", img:"copper red hair" }
+];
+const EYES = [
+  { l:"Violeta", es:"ojos violeta", img:"luminous violet eyes" },
+  { l:"Avellana", es:"ojos color avellana", img:"hazel eyes" },
+  { l:"Rojo sangre", es:"ojos rojo sangre", img:"glowing blood red eyes" },
+  { l:"Dorado", es:"ojos dorados", img:"luminous golden eyes" },
+  { l:"Gris tormenta", es:"ojos gris tormenta", img:"stormy grey eyes" },
+  { l:"Verde esmeralda", es:"ojos verde esmeralda", img:"emerald green eyes" }
+];
+const SCENTS = { night:"cedro y noche estrellada", spring:"rosas y lluvia de primavera", summer:"sal marina y jazmín", autumn:"humo y hojas secas", winter:"nieve recién caída y pino", dawn:"brisa marina y flores al amanecer", day:"ámbar y pergamino antiguo" };
+
+/* =========================================================
+   ESTADO
+   ========================================================= */
+const state = { screen:"home", step:0, gender:"m", steps:[], answers:{}, result:null, writing:false };
+
+/* =========================================================
+   UTILIDADES
+   ========================================================= */
+const pick = a => Array.isArray(a) ? a[Math.floor(Math.random() * a.length)] : a;
+const shuffle = a => { const b=[...a]; for (let i=b.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [b[i],b[j]]=[b[j],b[i]]; } return b; };
+function G(str) {
+  if (!str) return str;
+  let prev;
+  do { prev = str; str = str.replace(/\[([^|\[\]]*)\|([^\[\]]*)\]/g, (_, m, f) => state.gender === "m" ? m : f); }
+  while (str !== prev);
+  return str;
+}
+function U(s) { const y = state.answers && state.answers.you; return String(s).replace(/\{\{user\}\}/g, y && y.name && y.name.trim() ? y.name.trim() : "quien tengas enfrente"); }
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c])); }
+function store(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {} }
+function load(key, def) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch(e) { return def; } }
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 1600);
+}
+async function copy(text) {
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.setAttribute("readonly",""); ta.style.position="fixed"; ta.style.opacity="0";
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, 99999);
+    document.execCommand("copy"); ta.remove();
+  }
+  toast("✦ Copiado al portapapeles");
+}
+
+/* =========================================================
+   CONSTRUCCIÓN DEL TEST (las preguntas cambian en cada partida)
+   ========================================================= */
+function buildSteps() {
+  const qs = shuffle(QUESTION_POOL).slice(0, 8).map(q => ({ type:"q", q, order: shuffle(q.opts.map((_, i) => i)) }));
+  return [
+    { type:"you", key:"you", title:"Enfrente", q:"¿Con quién vas a rolear?" },
+    { type:"single", key:"court", title:"Corte", q:"¿A qué corte de Prythian pertenece?", data:COURTS },
+    { type:"single", key:"race", title:"Linaje", q:"¿Qué sangre corre por tus venas?", data:RACES },
+    { type:"single", key:"power", title:"Poder", q:"¿Qué poder despierta en [él|ella]?", data:POWERS },
+    { type:"single", key:"rel", title:"Vínculo", q:"¿Qué le une a {{user}}?", data:RELATIONS },
+    { type:"traits", key:"traits", title:"Personalidad", q:"¿Cómo es su alma?" },
+    ...qs,
+    { type:"look", key:"look", title:"Aspecto", q:"Los últimos detalles" }
+  ];
+}
+
+/* =========================================================
+   GENERADOR
+   ========================================================= */
+function generate() {
+  const a = state.answers;
+  const C = COURTS[a.court], R = RACES[a.race], P = POWERS[a.power], L = RELATIONS[a.rel];
+  const T = (a.traits || []).map(k => TRAITS[k]);
+  const look = a.look || {};
+  const hair = look.hair != null ? HAIR[look.hair] : pick(HAIR);
+  const eyes = look.eyes != null ? EYES[look.eyes] : pick(EYES);
+  const skinO = look.skin != null ? SKIN_ALL[look.skin] : pick(SKIN_ALL);
+  const buildO = look.build != null && BUILD_ALL[state.gender][look.build] ? BUILD_ALL[state.gender][look.build] : pick(BUILD_ALL[state.gender]);
+
+  let first, name;
+  if (look.name && look.name.trim()) { name = look.name.trim(); first = name.split(/\s+/)[0]; }
+  else { first = pick(C.names[state.gender]); name = G(`${first} ${pick(C.houses)}`); }
+
+  const you = a.you || {};
+  const botName = (you.name || "").trim() || "{{char}}";
+  const place = pick(C.places);
+  // En las plantillas, {{char}} = el personaje que creas (tu persona) y {{user}} = el bot con el que roleas
+  const fillKeep = s => G(s).replace(/\{\{char\}\}/g, first).replace(/\{\{user\}\}/g, botName).replace(/\{place\}/g, place).replace(/\{scent\}/g, SCENTS[a.court])
+    .replace(/(\s)de el(\s)/g, "$1del$2").replace(/(\s)a el(\s)/g, "$1al$2").replace(/(\s)en en(\s)/g, "$1en$2");
+  const cap = s => s ? s[0].toUpperCase() + s.slice(1) : s;
+  const low = s => s ? s[0].toLowerCase() + s.slice(1) : s;
+
+  const extras = a.extras || {};
+  const hidden = {}; for (const k in HIDDEN) hidden[k] = pick(HIDDEN[k]);
+  const hiddenLines = Object.entries(hidden).map(([k, v]) => `[${k}: ${v}]`).join("\n");
+  const extraLines = Object.values(extras).map(e => `[${e.field}: ${G(e.v)}]`).join("\n") + (Object.keys(extras).length ? "\n" : "") + hiddenLines;
+  const imgOf = key => { const e = Object.values(extras).find(x => x.img === key); return e ? e.imgv : null; };
+  const poolImg = id => pick(QUESTION_POOL.find(x => x.id === id).opts.filter(o => o.img)).img;
+
+  const looksArr = shuffle(R.looks).slice(0, 2);
+  const looks = looksArr.join("; ");
+  const traitsText = T.map(t => t.t).join("; ") + (a.traitsFree && a.traitsFree.trim() ? `; ${a.traitsFree.trim()}` : "");
+  const speech = T.map(t => t.sp).join(" ");
+  const canWinnow = a.power !== "steel";
+  const age = pick(R.age);
+  const species = R.species(C);
+  const powerTxt = `${P.text(C)}.${canWinnow ? " Puede tamizarse (winnowing): desaparecer y reaparecer en otro lugar." : ""} ${R.extra}`;
+  const botLine = you.name && you.name.trim()
+    ? `[Rolea con: ${you.name.trim()}${you.gender ? ` (${you.gender === "m" ? "hombre" : "mujer"})` : ""}${you.desc && you.desc.trim() ? `. ${cap(you.desc.trim())}` : ""}]\n` : "";
+
+  /* 1 · PERSONA para Janitor (la descripción de tu personaje) */
+  const definition = fillKeep(
+`[Nombre: ${name}]
+[Universo: Prythian (Una corte de rosas y espinas / ACOTAR)]
+[Corte: ${C.label}]
+[Especie: ${species}]
+[Género: ${state.gender === "m" ? "masculino" : "femenino"}]
+[Edad: ${age}]
+[Apariencia: ${hair.es}, ${eyes.es}, ${skinO.es}, ${buildO.es}; ${looks}]
+[Personalidad: ${traitsText}]
+[Forma de hablar: ${speech}]
+[Poder: ${powerTxt}]
+[Debilidad: ${R.weak}]
+${extraLines}
+[Relación con {{user}}: ${L.rel}]
+${botLine}[Secreto: ${L.secret}]`);
+
+  /* 2 · Versión corta en prosa (por si el campo de persona se queda pequeño) */
+  const shortV = fillKeep(
+`${name} es ${low(species)}. ${cap(age)}. Tiene ${hair.es}, ${eyes.es}, ${skinO.es} y ${buildO.es}, con ${looksArr.join(" y ")}. Es ${traitsText.replace(/; /g, ", ")}. Poder: ${low(P.text(C))}. ${L.rel} Su secreto: ${low(L.secret)}`);
+
+  /* 3 · Historia y contexto */
+  const scenario = fillKeep(`${PRYTHIAN} ${C.lore} ${pick(L.scen)}`);
+
+  /* 4 · Guía para rolear a tu personaje */
+  const lines = shuffle([...T.flatMap(t => [...t.o, ...t.c])]).slice(0, 4);
+  const exLines = T.slice(0, 2).map(t => { const [u, c] = pick(t.ex); return `Si te dicen «${u}» → ${c}`; });
+  const guide = fillKeep(
+`FORMA DE HABLAR
+${speech}
+
+GESTOS QUE PUEDES DESCRIBIR
+• *${pick(R.action)}*
+• ${cap(hidden["Manía"])}.
+
+FRASES PARA TU PERSONAJE
+${lines.map(l => `• "${l}"`).join("\n")}
+
+CÓMO RESPONDERÍA
+${exLines.map(l => `• ${l}`).join("\n")}
+
+REGLAS DE PRYTHIAN QUE TU PERSONAJE RESPETA
+• Como fae, no puede mentir abiertamente: domina las verdades a medias.
+• Un trato mágico es vinculante y queda tatuado en la piel.
+• El vínculo de pareja se acepta; nunca se impone.
+• El fresno y el hierro le hieren; el faebane anula su magia.`);
+
+  /* 5 · Primer mensaje para enviar tú al empezar el rol */
+  const t1 = T[0], t2 = T[1] || T[0];
+  const firstMsg = fillKeep(
+`*${pick(L.open)}*
+
+"${pick(t1.o)}"
+
+*${pick(R.action)}*
+
+"${pick(t2.c)}"`);
+
+  const tags = ["ACOTAR","Prythian","Persona", ...C.tags, G(R.label), G(P.label), L.tag, ...T.map(t => G(t.label))];
+
+  /* ---- Prompt de imagen: collage / moodboard cinematográfico ---- */
+  const subject = state.gender === "m" ? "man" : "woman";
+  const g = state.gender;
+  const male = g === "m";
+  const parts = {
+    outfit: imgOf("outfit") ?? (a.race === "illyrian" ? "black Illyrian fighting leathers with bracers" : poolImg("ropa")),
+    jewel:  imgOf("jewel") ?? poolImg("joya"),
+    mark:   imgOf("mark") ?? (a.race === "illyrian" ? "Illyrian warrior tattoos on the shoulder" : poolImg("marca")),
+    weapon: imgOf("weapon") ?? (a.race === "illyrian" ? "wielding a long Illyrian blade" : ""),
+    sky:    imgOf("sky") ?? imgOf("season") ?? "blue hour twilight sky with dark clouds",
+    place:  imgOf("place") ?? C.loc
+  };
+  const powerImg = { court:"", daemati:"faint violet glow in the eyes", shadow:"tendrils of living shadow curling around the body", seer:"faint silver light in the eyes", steel:"", cauldron:"an eerie dark aura" }[a.power];
+
+  // Físico: depende de corte (piel), linaje (complexión), aspecto elegido (pelo/ojos) y rasgos (expresión)
+  const tImg = (a.traits || []).map(k => TRAIT_IMG[k]).filter(Boolean);
+  const mainT = tImg[0] || { face:"an intense gaze", pose:"standing tall" };
+  const hairImg = `${HAIR_COLOR[hair.l] || "dark"} hair, ${pick(HAIR_STYLE[g])}`;
+  const skin = skinO.img;
+  const build = buildO.img;
+  const face = pick(FACE[g]);
+  const outfitImg = male ? `${parts.outfit}, worn open or shirtless to reveal a sculpted bare chest and defined abs` : parts.outfit;
+  const character = [build, skin, face, R.img, hairImg, eyes.img, outfitImg, R.wings, parts.weapon, powerImg, imgOf("pet")].filter(Boolean).join(", ");
+
+  // Paneles: núcleo fijo + paneles nacidos de las respuestas + relleno aleatorio
+  const powerPanel = a.power === "court" ? POWER_PANEL.court[a.court] : POWER_PANEL[a.power];
+  const answerPanels = [
+    powerPanel,
+    REL_PANEL[a.rel],
+    `detail close-up of ${parts.jewel}`,
+    `detail close-up of ${parts.mark}`,
+    tImg[1] ? `${tImg[1].pose}, ${tImg[1].face}` : null,
+    tImg[2] ? `close-up with ${tImg[2].face}` : null,
+    imgOf("pet") ? `close-up of ${imgOf("pet").replace(/ (perched on the shoulder|at the side|on the arm)$/, "")}` : null
+  ].filter(Boolean);
+  const muscle = male ? [`bare muscular torso with ${build.includes("eight-pack") ? "a deeply defined eight-pack" : "sculpted defined abs"}, light sheen of sweat`, "muscular arm and veined forearm with an ornate leather bracer"] : [];
+  const fillers = shuffle(EXTRA_PANELS[g]);
+  const nPanels = pick([9, 10, 11, 12]);
+  const core = [
+    `close-up portrait with ${mainT.face}`,
+    male ? "extreme macro close-up of one intense eye" : "extreme macro close-up of one eye with long lashes",
+  ];
+  const back = `back view${R.wings ? (male ? " of broad shoulders with the wings spread" : " showing the wings") : (male ? " of a broad muscular back" : "")} facing the landscape`;
+  const center = `large full-body center panel of ${male ? "him" : "her"} ${mainT.pose}, on ${parts.place}, ${parts.sky}`;
+  let middle = [...muscle, ...shuffle(answerPanels)];
+  while (middle.length < nPanels - 4) middle.push(fillers.shift());
+  middle = middle.slice(0, nPanels - 4);
+  const panels = [...core, ...shuffle(middle), back, center].join("; ");
+
+  const lens = pick(["shot on 85mm, shallow depth of field", "shot on 50mm film, soft focus edges", "cinematic anamorphic look", "medium format photography, crisp detail"]);
+  const imgPrompt =
+`character moodboard collage, grid of ${nPanels} cinematic photographic panels of the same ${subject}, A Court of Thorns and Roses inspired dark fantasy, High Fae with pointed ears, ${character}.
+Panels: ${panels}.
+Photorealistic, editorial dark fantasy photography, ${pick(LIGHTING[a.court])}, moody low-key lighting, deep shadows${male ? ", rim light sculpting the muscles" : ""}, dark palette of ${C.palette} with crimson undertones and subtle gold accents, desaturated tones, ${male ? "detailed skin texture" : "dewy skin texture"}, film grain, ${lens}, ultra detailed, 8k, thin dark borders between panels. Keep the same face and features in every panel.`;
+  const negPrompt = "cartoon, anime, 3d render, bright colors, oversaturated, low quality, blurry, deformed hands, extra fingers, round human ears, text, watermark, logo, different faces"
+    + (male ? ", feminine features, skinny, soft body, makeup, long eyelashes" : "");
+
+  const tagline = `${C.label} · ${G(R.label)} · ${L.label}`;
+
+  return { id: Date.now(), name, gender: state.gender, answers: JSON.parse(JSON.stringify(a)),
+    tagline: G(tagline), definition, shortV, scenario, guide, firstMsg, tags, imgPrompt, negPrompt, world: C.label, icon: C.icon };
+}
+
+function fullText(r) {
+  return `═══ ${r.name} ═══
+
+▸ PERSONA (descripción para Janitor)
+${r.definition}
+
+▸ VERSIÓN CORTA
+${r.shortV}
+
+▸ HISTORIA Y CONTEXTO
+${r.scenario}
+
+▸ CÓMO ROLEARLE
+${r.guide}
+
+▸ PRIMER MENSAJE (para enviar tú)
+${r.firstMsg}
+
+▸ PROMPT DE IMAGEN (avatar)
+${r.imgPrompt}
+
+▸ PROMPT NEGATIVO
+${r.negPrompt}`;
+}
+
+/* =========================================================
+   VISTAS
+   ========================================================= */
+const app = document.getElementById("app");
+
+function header(small) {
+  return `
+  <header class="text-center ${small ? "pt-2 pb-3" : "pt-8 pb-6"}">
+    <div class="text-oro chispa ${small ? "text-sm" : "text-lg"}">✦ ❦ ✦</div>
+    <h1 class="font-cinzel font-black titulo-oro ${small ? "text-2xl" : "text-4xl"} tracking-wider mt-1">Forja de Almas</h1>
+    ${small ? "" : `<p class="font-cormorant italic text-bruma text-lg mt-2">Crea tu personaje de Prythian para rolear en Janitor AI</p>`}
+  </header>`;
+}
+
+function renderHome() {
+  const hist = load("fda_hist_persona", []);
+  app.innerHTML = `
+  <div class="flex-1 flex flex-col aparecer">
+    ${header(false)}
+    <div class="marco rounded-2xl p-6 text-center">
+      <p class="font-cormorant text-xl leading-snug">
+        Forja tu propio personaje de ACOTAR, el que tú controlarás en Janitor. Más de una docena de preguntas que cambian en cada ritual.
+      </p>
+      <div class="divisor my-5"></div>
+      <p class="font-cinzel text-xs tracking-[.25em] text-oro mb-3">TU PERSONAJE SERÁ</p>
+      <div class="grid grid-cols-2 gap-3">
+        ${["m","f"].map(g => `
+          <button data-gender="${g}" class="opcion ${state.gender === g ? "sel" : ""} marco rounded-xl py-4 font-cinzel text-base">
+            ${g === "m" ? "♂ Él" : "♀ Ella"}
+          </button>`).join("")}
+      </div>
+    </div>
+
+    <button id="start" class="btn-oro mt-6 w-full rounded-2xl py-5 font-cinzel font-bold text-lg tracking-widest active:scale-[.98] transition">
+      COMENZAR EL RITUAL
+    </button>
+
+    ${hist.length ? `
+    <div class="mt-8">
+      <p class="font-cinzel text-xs tracking-[.25em] text-oro mb-3 text-center">ALMAS FORJADAS</p>
+      <div class="space-y-2">
+        ${hist.map((h, i) => `
+          <button data-hist="${i}" class="opcion marco w-full rounded-xl px-4 py-3 flex items-center gap-3 text-left">
+            <span class="text-2xl">${h.icon}</span>
+            <span class="flex-1 min-w-0">
+              <span class="block font-cinzel text-sm text-oroclaro truncate">${esc(h.name)}</span>
+              <span class="block font-cormorant italic text-bruma text-sm truncate">${esc(h.tagline)}</span>
+            </span>
+            <span class="text-oro">›</span>
+          </button>`).join("")}
+      </div>
+      <button id="clearHist" class="w-full mt-3 py-3 text-xs text-bruma/70">Borrar historial</button>
+    </div>` : ""}
+
+    <p class="mt-auto pt-8 text-center text-[11px] text-bruma/60">En Safari: Compartir → «Añadir a pantalla de inicio»</p>
+  </div>`;
+
+  app.querySelectorAll("[data-gender]").forEach(b => b.onclick = () => { state.gender = b.dataset.gender; renderHome(); });
+  document.getElementById("start").onclick = () => {
+    state.steps = buildSteps(); state.step = 0; state.answers = { extras:{} }; state.writing = false;
+    state.screen = "quiz"; render();
+  };
+  app.querySelectorAll("[data-hist]").forEach(b => b.onclick = () => {
+    const r = load("fda_hist_persona", [])[+b.dataset.hist];
+    state.result = r; state.gender = r.gender; state.answers = r.answers; state.screen = "result"; render();
+  });
+  const ch = document.getElementById("clearHist");
+  if (ch) ch.onclick = () => { store("fda_hist_persona", []); renderHome(); };
+}
+
+function quizShell(s, body) {
+  const n = state.steps.length;
+  const question = typeof s.q === "string" ? s.q : s.q.q;
+  return `
+  <div class="flex-1 flex flex-col">
+    ${header(true)}
+    <div class="flex items-center gap-1 mb-2">
+      ${state.steps.map((_, i) => `<div class="h-1 flex-1 rounded-full ${i <= state.step ? "bg-oro" : "bg-velo"}"></div>`).join("")}
+    </div>
+    <div class="flex justify-between text-[11px] font-cinzel tracking-widest text-bruma mb-5">
+      <span>PASO ${state.step + 1} / ${n}</span><span class="text-oro">${esc(s.title || s.q.field).toUpperCase()}</span>
+    </div>
+    <h2 class="font-cormorant text-[28px] leading-tight font-semibold text-center text-oroclaro mb-5 aparecer">${esc(U(G(question)))}</h2>
+    ${body}
+    <button id="back" class="mt-auto pt-6 pb-2 w-full py-4 font-cinzel text-sm tracking-widest text-bruma active:text-oro">
+      ‹ ${state.step === 0 ? "INICIO" : "ATRÁS"}
+    </button>
+  </div>`;
+}
+
+function optButton(attr, icon, label, sub, sel) {
+  return `
+    <button ${attr} class="opcion ${sel ? "sel" : ""} marco w-full rounded-2xl px-4 py-4 min-h-[72px] flex items-center gap-4 text-left">
+      <span class="text-3xl w-10 text-center shrink-0">${icon}</span>
+      <span class="flex-1">
+        <span class="block font-cinzel font-bold text-[15px] text-[#f3eee8] tracking-wide">${esc(label)}</span>
+        ${sub ? `<span class="block font-cormorant italic text-bruma text-[16px] leading-snug">${esc(sub)}</span>` : ""}
+      </span>
+      <span class="text-oro text-xl">${sel ? "✦" : "›"}</span>
+    </button>`;
+}
+
+function next() {
+  state.writing = false;
+  if (state.step < state.steps.length - 1) { state.step++; renderQuiz(); window.scrollTo({ top:0 }); }
+  else forge();
+}
+
+function renderQuiz() {
+  const s = state.steps[state.step];
+  let body = "";
+
+  if (s.type === "single") {
+    const sel = state.answers[s.key];
+    const court = COURTS[state.answers.court];
+    body = `<div class="space-y-3 aparecer">${Object.entries(s.data).map(([k, o]) => {
+      const sub = (s.key === "power" && k === "court" && court) ? court.gift : G(o.sub);
+      return optButton(`data-opt="${k}"`, o.icon, G(o.label), sub, sel === k);
+    }).join("")}</div>`;
+  }
+
+  if (s.type === "traits") {
+    const sel = state.answers.traits || [];
+    body = `
+    <p class="text-center font-cormorant italic text-bruma text-lg -mt-3 mb-4">Elige hasta 3 rasgos y combínalos</p>
+    <div class="grid grid-cols-2 gap-2.5 aparecer">
+      ${Object.entries(TRAITS).map(([k, t]) => {
+        const on = sel.includes(k), off = !on && sel.length >= 3;
+        return `<button data-trait="${k}" class="opcion ${on ? "sel" : ""} ${off ? "off" : ""} marco rounded-xl px-3 py-3.5 min-h-[56px] flex items-center gap-2 text-left">
+          <span class="text-xl">${t.icon}</span><span class="font-cinzel text-[13px] font-bold">${G(t.label)}</span></button>`;
+      }).join("")}
+    </div>
+    <p class="font-cinzel text-[11px] tracking-[.2em] text-oro mt-5 mb-2">AÑADE ALGO CON TUS PALABRAS (OPCIONAL)</p>
+    <textarea id="traitsFree" rows="2" class="campo" placeholder="Ej.: odia que le toquen las alas, le encantan las tormentas…">${esc(state.answers.traitsFree || "")}</textarea>
+    <button id="cont" ${sel.length ? "" : "disabled"} class="btn-oro w-full mt-4 rounded-2xl py-4 font-cinzel font-bold tracking-widest">
+      CONTINUAR · ${sel.length}/3
+    </button>`;
+  }
+
+  if (s.type === "q") {
+    const cur = state.answers.extras[s.q.id];
+    body = `<div class="space-y-3 aparecer">
+      ${s.order.map(i => { const o = s.q.opts[i];
+        return optButton(`data-q="${i}"`, o.i, U(G(o.l)), "", cur && !cur.custom && cur.idx === i); }).join("")}
+      ${state.writing ? `
+        <div class="marco rounded-2xl p-4">
+          <textarea id="customQ" rows="2" class="campo" placeholder="Escribe tu respuesta…">${esc(cur && cur.custom ? cur.v : "")}</textarea>
+          <button id="customOk" class="btn-oro w-full mt-3 rounded-xl py-3.5 font-cinzel font-bold tracking-widest">CONFIRMAR</button>
+        </div>` :
+        optButton(`id="writeOwn"`, "✍️", "Escribir la mía", "Si ninguna encaja", cur && cur.custom)}
+    </div>`;
+  }
+
+  if (s.type === "you") {
+    const y = state.answers.you = state.answers.you || load("fda_you", { name:"", gender:null, desc:"" });
+    body = `
+    <div class="aparecer">
+      <p class="text-center font-cormorant italic text-bruma text-lg -mt-3 mb-5">El bot de Janitor con el que vas a jugar. Si lo dejas vacío, se usará {{char}}</p>
+      <p class="font-cinzel text-[11px] tracking-[.2em] text-oro mb-2">NOMBRE DEL BOT (OPCIONAL)</p>
+      <input id="youName" class="campo" placeholder="Ej.: Rhysand, Kael…" value="${esc(y.name || "")}" autocomplete="off">
+      <p class="font-cinzel text-[11px] tracking-[.2em] text-oro mt-5 mb-2">ES</p>
+      <div class="grid grid-cols-2 gap-3">
+        ${["m","f"].map(g => `<button data-yg="${g}" class="opcion ${y.gender === g ? "sel" : ""} marco rounded-xl py-3.5 font-cinzel">${g === "m" ? "♂ Hombre" : "♀ Mujer"}</button>`).join("")}
+      </div>
+      <p class="font-cinzel text-[11px] tracking-[.2em] text-oro mt-5 mb-2">QUIÉN ES (OPCIONAL)</p>
+      <textarea id="youDesc" rows="2" class="campo" placeholder="Ej.: Alto Señor de la Corte Noche…">${esc(y.desc || "")}</textarea>
+      <button id="youOk" class="btn-oro w-full mt-5 rounded-2xl py-4 font-cinzel font-bold tracking-widest">CONTINUAR</button>
+    </div>`.replace(/\[([^|\[\]]*)\|([^\[\]]*)\]/g, (_, m, f) => state.gender === "m" ? m : f);
+  }
+
+  if (s.type === "look") {
+    const lk = state.answers.look || {};
+    const chips = (arr, key) => arr.map((o, i) => `
+      <button data-look="${key}" data-i="${i}" class="opcion ${lk[key] === i ? "sel" : ""} marco rounded-xl px-3 py-3 font-cinzel text-[12px] font-bold">${G(o.l)}</button>`).join("");
+    body = `
+    <div class="aparecer">
+      <p class="font-cinzel text-[11px] tracking-[.2em] text-oro mb-2">NOMBRE (OPCIONAL)</p>
+      <input id="nameIn" class="campo" placeholder="Déjalo vacío y el Caldero elegirá" value="${esc(lk.name || "")}" autocomplete="off">
+      <p class="font-cinzel text-[11px] tracking-[.2em] text-oro mt-5 mb-2">CABELLO</p>
+      <div class="grid grid-cols-3 gap-2">${chips(HAIR, "hair")}</div>
+      <p class="font-cinzel text-[11px] tracking-[.2em] text-oro mt-5 mb-2">OJOS</p>
+      <div class="grid grid-cols-3 gap-2">${chips(EYES, "eyes")}</div>
+      <p class="font-cinzel text-[11px] tracking-[.2em] text-oro mt-5 mb-2">TONO DE PIEL</p>
+      <div class="grid grid-cols-3 gap-2">${chips(SKIN_ALL, "skin")}</div>
+      <p class="font-cinzel text-[11px] tracking-[.2em] text-oro mt-5 mb-2">COMPLEXIÓN</p>
+      <div class="grid grid-cols-3 gap-2">${chips(BUILD_ALL[state.gender], "build")}</div>
+      <p class="text-center text-xs text-bruma/70 mt-3">Lo que no elijas se decidirá al azar</p>
+      <button id="forgeBtn" class="btn-oro w-full mt-5 rounded-2xl py-5 font-cinzel font-bold text-lg tracking-widest">⚱️ FORJAR ALMA</button>
+    </div>`;
+  }
+
+  app.innerHTML = quizShell(s, body);
+
+  /* ---- eventos ---- */
+  app.querySelectorAll("[data-opt]").forEach(b => b.onclick = () => {
+    state.answers[s.key] = b.dataset.opt; b.classList.add("sel"); setTimeout(next, 180);
+  });
+
+  app.querySelectorAll("[data-trait]").forEach(b => b.onclick = () => {
+    state.answers.traitsFree = document.getElementById("traitsFree").value;
+    const sel = state.answers.traits || []; const k = b.dataset.trait;
+    if (sel.includes(k)) state.answers.traits = sel.filter(x => x !== k);
+    else if (sel.length < 3) state.answers.traits = [...sel, k];
+    const y = window.scrollY; renderQuiz(); window.scrollTo({ top:y });
+  });
+  const cont = document.getElementById("cont");
+  if (cont) cont.onclick = () => { state.answers.traitsFree = document.getElementById("traitsFree").value; next(); };
+
+  app.querySelectorAll("[data-q]").forEach(b => b.onclick = () => {
+    const i = +b.dataset.q, o = s.q.opts[i];
+    state.answers.extras[s.q.id] = { field:s.q.field, v:o.l, img:s.q.img || null, imgv:o.img || "", idx:i, custom:false };
+    b.classList.add("sel"); setTimeout(next, 180);
+  });
+  const wo = document.getElementById("writeOwn");
+  if (wo) wo.onclick = () => { state.writing = true; renderQuiz(); setTimeout(() => document.getElementById("customQ")?.focus(), 50); };
+  const ok = document.getElementById("customOk");
+  if (ok) ok.onclick = () => {
+    const v = document.getElementById("customQ").value.trim();
+    if (!v) { toast("Escribe algo primero"); return; }
+    state.answers.extras[s.q.id] = { field:s.q.field, v, img:null, imgv:"", custom:true };
+    next();
+  };
+
+  app.querySelectorAll("[data-look]").forEach(b => b.onclick = () => {
+    const lk = state.answers.look = state.answers.look || {};
+    lk.name = document.getElementById("nameIn").value;
+    const k = b.dataset.look, i = +b.dataset.i;
+    lk[k] = lk[k] === i ? null : i;
+    const y = window.scrollY; renderQuiz(); window.scrollTo({ top:y });
+  });
+  const saveYou = () => { const y = state.answers.you; y.name = document.getElementById("youName").value; y.desc = document.getElementById("youDesc").value; };
+  app.querySelectorAll("[data-yg]").forEach(b => b.onclick = () => { saveYou(); state.answers.you.gender = b.dataset.yg; renderQuiz(); });
+  const yo = document.getElementById("youOk");
+  if (yo) yo.onclick = () => {
+    saveYou();
+    store("fda_you", state.answers.you); next();
+  };
+  const fb = document.getElementById("forgeBtn");
+  if (fb) fb.onclick = () => {
+    const lk = state.answers.look = state.answers.look || {};
+    lk.name = document.getElementById("nameIn").value; forge();
+  };
+
+  document.getElementById("back").onclick = () => {
+    if (state.writing) { state.writing = false; renderQuiz(); return; }
+    if (state.step === 0) { state.screen = "home"; render(); }
+    else { state.step--; renderQuiz(); }
+  };
+}
+
+function forge() {
+  app.innerHTML = `
+  <div class="flex-1 flex flex-col items-center justify-center text-center aparecer">
+    <div class="text-6xl chispa">⚱️</div>
+    <p class="font-cinzel titulo-oro text-2xl mt-6 tracking-widest">El Caldero hierve…</p>
+    <p class="font-cormorant italic text-bruma text-lg mt-2">Un alma nueva despierta en Prythian</p>
+  </div>`;
+  setTimeout(() => {
+    state.result = generate();
+    const hist = load("fda_hist_persona", []); hist.unshift(state.result); store("fda_hist_persona", hist.slice(0, 10));
+    state.screen = "result"; render();
+  }, 1100);
+}
+
+function section(id, title, content, open, mono) {
+  return `
+  <details class="marco rounded-2xl overflow-hidden" ${open ? "open" : ""}>
+    <summary class="list-none flex items-center justify-between px-4 py-4 cursor-pointer">
+      <span class="font-cinzel font-bold text-sm tracking-widest text-oro">${title}</span>
+      <span class="text-oro text-lg">✧</span>
+    </summary>
+    <div class="px-4 pb-4">
+      <div class="divisor mb-3"></div>
+      <pre class="bloque ${mono ? "mono" : ""}">${esc(content)}</pre>
+      <button data-copy="${id}" class="mt-4 w-full rounded-xl py-3.5 font-cinzel text-xs tracking-widest border border-oro/50 text-oroclaro active:bg-oro/10">
+        COPIAR ${title}
+      </button>
+    </div>
+  </details>`;
+}
+
+function renderResult() {
+  const r = state.result;
+  const parts = { def:r.definition, short:r.shortV, scen:r.scenario, guide:r.guide, first:r.firstMsg,
+    img:r.imgPrompt, neg:r.negPrompt, all:fullText(r) };
+  app.innerHTML = `
+  <div class="flex-1 flex flex-col aparecer">
+    ${header(true)}
+    <div class="marco rounded-2xl p-6 text-center mb-4">
+      <div class="text-5xl">${r.icon}</div>
+      <p class="font-cinzel text-[11px] tracking-[.3em] text-bruma mt-3">${esc(r.world.toUpperCase())}</p>
+      <h2 class="font-cinzel font-black titulo-oro text-[26px] leading-tight mt-2">${esc(r.name)}</h2>
+      <p class="font-cormorant italic text-bruma text-lg mt-2">${esc(r.tagline)}</p>
+      <div class="flex flex-wrap justify-center gap-1.5 mt-4">
+        ${r.tags.map(t => `<span class="text-[11px] px-2.5 py-1 rounded-full border border-oro/40 text-oroclaro/90">${esc(t)}</span>`).join("")}
+      </div>
+    </div>
+
+    <button data-copy="all" class="btn-oro w-full rounded-2xl py-5 font-cinzel font-bold tracking-widest active:scale-[.98] transition mb-4">
+      ✦ COPIAR TODO
+    </button>
+
+    <div class="space-y-3">
+      <p class="text-center font-cormorant italic text-bruma text-[15px] -mt-1 mb-1">Pega la persona en Janitor → Perfil → Personas</p>
+      ${section("def", "PERSONA", r.definition, true)}
+      ${section("short", "VERSIÓN CORTA", r.shortV)}
+      ${section("guide", "CÓMO ROLEARLE", r.guide)}
+      ${section("first", "PRIMER MENSAJE", r.firstMsg)}
+      ${section("scen", "HISTORIA", r.scenario)}
+      ${section("img", "PROMPT DE IMAGEN", r.imgPrompt, false, true)}
+      ${section("neg", "PROMPT NEGATIVO", r.negPrompt, false, true)}
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 mt-5">
+      <button id="reroll" class="opcion marco rounded-2xl py-4 font-cinzel text-xs tracking-widest text-oroclaro">🎲 OTRA VERSIÓN</button>
+      <button id="share" class="opcion marco rounded-2xl py-4 font-cinzel text-xs tracking-widest text-oroclaro">📤 COMPARTIR</button>
+    </div>
+    <button id="restart" class="w-full mt-3 py-4 font-cinzel text-sm tracking-widest text-bruma active:text-oro">↺ NUEVO PERSONAJE</button>
+  </div>`;
+
+  app.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => copy(parts[b.dataset.copy]));
+  document.getElementById("reroll").onclick = () => forge();
+  document.getElementById("restart").onclick = () => { state.screen = "home"; render(); };
+  document.getElementById("share").onclick = async () => {
+    if (navigator.share) { try { await navigator.share({ title:r.name, text:fullText(r) }); } catch (e) {} }
+    else copy(fullText(r));
+  };
+}
+
+function render() {
+  window.scrollTo({ top:0 });
+  if (state.screen === "home") renderHome();
+  else if (state.screen === "quiz") renderQuiz();
+  else renderResult();
+}
+
+/* =========================================================
+   ICONO + MANIFEST (generados al vuelo)
+   ========================================================= */
+(function pwaAssets() {
+  try {
+    const c = document.createElement("canvas"); c.width = c.height = 180;
+    const x = c.getContext("2d");
+    const g = x.createRadialGradient(90, 60, 10, 90, 90, 120);
+    g.addColorStop(0, "#3a1219"); g.addColorStop(1, "#0b0a0f");
+    x.fillStyle = g; x.fillRect(0, 0, 180, 180);
+    x.strokeStyle = "#d4af6a"; x.lineWidth = 4; x.strokeRect(14, 14, 152, 152);
+    x.lineWidth = 1.5; x.strokeRect(22, 22, 136, 136);
+    x.fillStyle = "#e9c987"; x.font = "bold 92px Georgia, serif";
+    x.textAlign = "center"; x.textBaseline = "middle"; x.fillText("F", 90, 96);
+    x.font = "20px Georgia, serif"; x.fillText("✦", 90, 38); x.fillText("✦", 90, 148);
+    const png = c.toDataURL("image/png");
+    document.getElementById("appleIcon").href = png;
+    const manifest = { name:"Forja de Almas", short_name:"Forja", display:"standalone", start_url:location.href,
+      background_color:"#0b0a0f", theme_color:"#0b0a0f", icons:[{ src:png, sizes:"180x180", type:"image/png" }] };
+    document.getElementById("manifestLink").href =
+      URL.createObjectURL(new Blob([JSON.stringify(manifest)], { type:"application/manifest+json" }));
+  } catch (e) {}
+})();
+
+render();
+</script>
+</body>
+</html>
